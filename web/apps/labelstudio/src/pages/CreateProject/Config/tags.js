@@ -38,6 +38,18 @@ const OBJECTS = {
       },
     },
   },
+  ImageSync: {
+    type: "ImageSync",
+    settings: {
+      depth: {
+        title: "Sync depth",
+        type: Number,
+        param: ($obj, value) => $obj.setAttribute("depth", value),
+        value: ($obj) => parseInt($obj.getAttribute("depth") || Infinity),
+      },
+      // Add any other settings specific to ImageSync
+    },
+  },
   HyperText: {
     type: "HyperText",
   },

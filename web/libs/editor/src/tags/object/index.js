@@ -1,5 +1,5 @@
 import { AudioModel } from "./AudioNext";
-import { ImageModel } from "./Image";
+import { ImageModel, ImageSyncModel } from "./Image";
 import { ParagraphsModel } from "./Paragraphs";
 import { RichTextModel } from "./RichText";
 import { TableModel } from "./Table";
@@ -15,6 +15,7 @@ import "./Text";
 export {
   AudioModel,
   ImageModel,
+  ImageSyncModel,
   ParagraphsModel,
   TimeSeriesModel,
   RichTextModel,

@@ -2,10 +2,13 @@ import { inject } from "mobx-react";
 import { destroy, getRoot, getType, types } from "mobx-state-tree";
 
 import ImageView from "../../../components/ImageView/ImageView";
+import ImageSyncComponent from "../../../components/ImageView/ImageSync";
 import { customTypes } from "../../../core/CustomTypes";
 import Registry from "../../../core/Registry";
 import { AnnotationMixin } from "../../../mixins/AnnotationMixin";
 import { IsReadyWithDepsMixin } from "../../../mixins/IsReadyMixin";
+import { SyncableMixin } from "../../../mixins/Syncable";
+import { ProcessAttrsMixin } from "../../../mixins/ProcessAttrs";
 import { BrushRegionModel } from "../../../regions/BrushRegion";
 import { EllipseRegionModel } from "../../../regions/EllipseRegion";
 import { KeyPointRegionModel } from "../../../regions/KeyPointRegion";
@@ -1257,9 +1260,47 @@ const ImageModel = types.compose(
   isFF(FF_DEV_3793) ? CoordsCalculations : AbsoluteCoordsCalculations,
 );
 
+const TagAttrsIS = types.compose(
+  "TagAttrsIS",
+  types.model({
+    name: types.identifier,
+    depth: types.optional(types.number, Infinity),
+  })
+);
+
+const ImageSyncModel = types.compose(
+  "ImageSyncModel",
+  TagAttrsIS,
+  ObjectBase,
+  ...(isFF(FF_LSDV_4583) ? [MultiItemObjectBase] : []),
+  AnnotationMixin,
+  IsReadyWithDepsMixin,
+  types.model({
+    type: "imagesync",
+    children: types.array(types.late(() => ImageModel)),
+  })
+  .views((self) => ({
+    get store() {
+      return getRoot(self);
+    },
+  }))
+  .actions((self) => ({
+    afterCreate() {
+      // Implementation here
+    },
+    // ... other actions
+  }))
+);
+
+
 const HtxImage = inject("store")(ImageView);
+const HtxImageSync = inject("store")(ImageSyncComponent);
 
 Registry.addTag("image", ImageModel, HtxImage);
 Registry.addObjectType(ImageModel);
 
-export { ImageModel, HtxImage };
+Registry.addTag("imagesync", ImageSyncModel, HtxImageSync);
+Registry.addObjectType(ImageSyncModel);
+
+
+export { ImageModel, HtxImage, ImageSyncModel, HtxImageSync };

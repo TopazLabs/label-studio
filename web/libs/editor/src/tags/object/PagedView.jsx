@@ -44,6 +44,7 @@ const Model = types.model({
     "text",
     "audio",
     "image",
+    // "imagesync",
     "hypertext",
     "richtext",
     "timeseries",

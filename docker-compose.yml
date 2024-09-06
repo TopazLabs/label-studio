@@ -2,8 +2,9 @@ version: "3.9"
 services:
   nginx:
     build: .
-    image: heartexlabs/label-studio:latest
+    image: topaz-label-studio:latest
     restart: unless-stopped
+    user: root
     ports:
       - "8080:8085"
       - "8081:8086"
@@ -26,10 +27,11 @@ services:
     stdin_open: true
     tty: true
     build: .
-    image: heartexlabs/label-studio:latest
+    image: topaz-label-studio:latest
     restart: unless-stopped
     expose:
       - "8000"
+    user: root
     depends_on:
       - db
     environment:
@@ -49,6 +51,7 @@ services:
   db:
     image: pgautoupgrade/pgautoupgrade:13-alpine
     hostname: db
+    user: root
     restart: unless-stopped
     # Optional: Enable TLS on PostgreSQL
     # Just drop your server.crt and server.key into folder 'deploy/pgsql/certs'

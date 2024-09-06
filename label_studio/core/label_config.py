@@ -18,12 +18,13 @@ from label_studio.core.utils.exceptions import (
     LabelStudioValidationErrorSentryIgnored,
 )
 from label_studio.core.utils.io import find_file
+# from label_studio.tools.label_config import parse_config 
 
 logger = logging.getLogger(__name__)
 
 
 _DATA_EXAMPLES = None
-_LABEL_TAGS = {'Label', 'Choice', 'Relation'}
+_LABEL_TAGS = {'Label', 'Choice', 'ImageSync', 'Relation'}
 SINGLE_VALUED_TAGS = {'choices': str, 'rating': int, 'number': float, 'textarea': str}
 _NOT_CONTROL_TAGS = {
     'Filter',
@@ -52,6 +53,8 @@ def parse_config(config_string):
     logger.warning('Using deprecated method - switch to label_studio.tools.label_config.parse_config!')
     return label_config.parse_config(config_string)
 
+# def parse_config(config_string):
+#     label_studio.tools.label_config.parse_config
 
 def _fix_choices(config):
     """

@@ -236,9 +236,24 @@ You can use Label Studio as an independent part of your machine learning workflo
 | [label-studio-transformers](https://github.com/heartexlabs/label-studio-transformers) | Transformers library connected and configured for use with Label Studio |
 
 
-## Roadmap
 
-Want to use **The Coolest Feature X** but Label Studio doesn't support it? Check out [our public roadmap](roadmap.md)!
+## Topaz Docs
+
+### 1. Building the container:
+
+```bash 
+docker build -t topaz-label-studio .
+``` 
+
+### 2. Running the container:
+```bash 
+docker compose up
+``` 
+
+### 3. Running the web web app from bash:
+```bash 
+bash /home/starkiller/dev/label-studio/run_app.sh
+``` 
 
 ## Citation
 

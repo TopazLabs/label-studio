@@ -118,6 +118,7 @@
         "Label": {"$ref": "#/definitions/MaybeMultipleLabel"},
         "Choice": {"$ref": "#/definitions/MaybeMultipleChoice"},
         "Image": {"$ref": "#/definitions/tags_with_value_required_name"},
+        "ImageSync": {"$ref": "#/definitions/MaybeMultipleImageSync"},
         "Text": {"$ref": "#/definitions/tags_with_value_required_name"},
         "HyperText": {"$ref": "#/definitions/tags_with_value_required_name"},
         "View": {"$ref": "#/definitions/MaybeMultipleView"},
@@ -130,6 +131,30 @@
         "type": "array",
         "items": {"$ref": "#/definitions/View"}
       }, {"$ref": "#/definitions/View"}]
+    },
+    "ImageSync": {
+      "type": "object",
+      "required": ["@name"],
+      "properties": {
+        "@name": {
+          "$ref": "#/definitions/@name"
+        },
+        "@depth": {
+          "type": "number"
+        },
+        "$": {
+          "$ref": "#/definitions/$"
+        },
+        "Image": {
+          "$ref": "#/definitions/tags_with_value_required_name"
+        }
+      }
+    },
+    "MaybeMultipleImageSync": {
+      "anyOf": [{
+        "type": "array",
+        "items": {"$ref": "#/definitions/ImageSync"}
+      }, {"$ref": "#/definitions/ImageSync"}]
     },
     "Choice": {
       "$ref": "#/definitions/tag_with_value"
@@ -250,7 +275,8 @@
         "Text": {"$ref": "#/definitions/tags_with_value_required_name"},
         "HyperText": {"$ref": "#/definitions/tags_with_value_required_name"},
         "TextArea": {"$ref": "#/definitions/MaybeMultipleTextAreas"},
-        "Number": {"$ref": "#/definitions/tags_with_name_and_toname"}
+        "Number": {"$ref": "#/definitions/tags_with_name_and_toname"},
+        "ImageSync": {"$ref": "#/definitions/MaybeMultipleImageSync"}
       }
     }
   }

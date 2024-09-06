@@ -1,1 +1,1 @@
-export { ImageModel, HtxImage } from "./Image";
+export { ImageModel, HtxImage, ImageSyncModel, HtxImageSync } from "./Image";

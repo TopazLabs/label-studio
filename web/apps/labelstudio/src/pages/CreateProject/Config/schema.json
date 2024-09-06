@@ -2268,6 +2268,18 @@
       }
     }
   },
+  "ImageSync": {
+  "name": "ImageSync",
+  "description": "The ImageSync tag synchronizes transforms for multiple images.",
+  "attrs": {
+    "depth": {
+      "name": "depth",
+      "description": "Depth of child elements to search for images to sync",
+      "type": "number",
+      "required": false
+    }
+  }
+  },
   "TimeSeriesLabels": {
     "name": "TimeSeriesLabels",
     "description": "The `TimeSeriesLabels` tag is used to create a labeled time range.\n\nUse with the following data types: time series.",
@@ -2504,6 +2516,7 @@
       "Audio",
       "HyperText",
       "Image",
+      "ImageSync",
       "List",
       "Paragraphs",
       "Table",

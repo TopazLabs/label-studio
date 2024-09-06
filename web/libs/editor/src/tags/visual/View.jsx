@@ -1,7 +1,6 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { types } from "mobx-state-tree";
-
 import Registry from "../../core/Registry";
 import Tree from "../../core/Tree";
 import Types from "../../core/Types";
@@ -74,6 +73,7 @@ const Model = types.model({
     "text",
     "audio",
     "image",
+    "imagesync",
     "hypertext",
     "richtext",
     "timeseries",
@@ -115,7 +115,7 @@ const HtxView = observer(({ item }) => {
   }
 
   return (
-    <div id={item.idattr} className={item.classname} style={style}>
+    <div id={item.idattr} className={item.classname} style={style}>   
       {Tree.renderChildren(item, item.annotation)}
     </div>
   );
