@@ -41,13 +41,30 @@ const OBJECTS = {
   ImageSync: {
     type: "ImageSync",
     settings: {
+      image0: {
+        title: "Reference Image",
+        type: String,
+        param: ($obj, value) => $obj.setAttribute("image0", value),
+        value: ($obj) => $obj.getAttribute("image0"),
+      },
+      image1: {
+        title: "Image 1",
+        type: String,
+        param: ($obj, value) => $obj.setAttribute("image1", value),
+        value: ($obj) => $obj.getAttribute("image1"),
+      },
+      image2: {
+        title: "Image 2",
+        type: String,
+        param: ($obj, value) => $obj.setAttribute("image2", value),
+        value: ($obj) => $obj.getAttribute("image2"),
+      },
       depth: {
         title: "Sync depth",
         type: Number,
         param: ($obj, value) => $obj.setAttribute("depth", value),
         value: ($obj) => parseInt($obj.getAttribute("depth") || Infinity),
       },
-      // Add any other settings specific to ImageSync
     },
   },
   HyperText: {

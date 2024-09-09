@@ -297,7 +297,7 @@
       },
       "defaultZoom": {
         "name": "defaultZoom",
-        "description": "Specify the initial zoom of the image within the viewport while preserving it’s ratio. Can be one of \"auto\", \"original\" or \"fit\"",
+        "description": "Specify the initial zoom of the image within the viewport while preserving it's ratio. Can be one of \"auto\", \"original\" or \"fit\"",
         "type": "string",
         "required": false,
         "default": "fit"
@@ -2269,16 +2269,34 @@
     }
   },
   "ImageSync": {
-  "name": "ImageSync",
-  "description": "The ImageSync tag synchronizes transforms for multiple images.",
-  "attrs": {
-    "depth": {
-      "name": "depth",
-      "description": "Depth of child elements to search for images to sync",
-      "type": "number",
-      "required": false
+    "name": "ImageSync",
+    "description": "The ImageSync tag synchronizes transforms for multiple images.",
+    "attrs": {
+      "image0": {
+        "name": "image0",
+        "description": "URL or path to the reference image",
+        "type": "string",
+        "required": true
+      },
+      "image1": {
+        "name": "image1",
+        "description": "URL or path to the first comparison image",
+        "type": "string",
+        "required": true
+      },
+      "image2": {
+        "name": "image2",
+        "description": "URL or path to the second comparison image",
+        "type": "string",
+        "required": true
+      },
+      "depth": {
+        "name": "depth",
+        "description": "Depth of child elements to search for images to sync",
+        "type": "number",
+        "required": false
+      }
     }
-  }
   },
   "TimeSeriesLabels": {
     "name": "TimeSeriesLabels",

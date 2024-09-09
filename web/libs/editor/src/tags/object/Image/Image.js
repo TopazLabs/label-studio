@@ -1277,14 +1277,14 @@ const ImageSyncModel = types.compose(
   IsReadyWithDepsMixin,
   types.model({
     type: "imagesync",
-    children: types.array(types.late(() => ImageModel)),
-  })
-  .views((self) => ({
+    image0: types.maybe(types.string),
+    image1: types.maybe(types.string),
+    image2: types.maybe(types.string),
+  }).views((self) => ({
     get store() {
       return getRoot(self);
     },
-  }))
-  .actions((self) => ({
+  })).actions((self) => ({
     afterCreate() {
       // Implementation here
     },

@@ -134,19 +134,25 @@
     },
     "ImageSync": {
       "type": "object",
-      "required": ["@name"],
+      "required": ["@name", "@image0", "@image1", "@image2"],
       "properties": {
         "@name": {
           "$ref": "#/definitions/@name"
+        },
+        "@image0": {
+          "type": "string"
+        },
+        "@image1": {
+          "type": "string"
+        },
+        "@image2": {
+          "type": "string"
         },
         "@depth": {
           "type": "number"
         },
         "$": {
           "$ref": "#/definitions/$"
-        },
-        "Image": {
-          "$ref": "#/definitions/tags_with_value_required_name"
         }
       }
     },
