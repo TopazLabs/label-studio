@@ -34,7 +34,10 @@ yarn config set network-timeout 1200000
 yarn install --prefer-offline --no-progress --pure-lockfile --frozen-lockfile --ignore-engines --non-interactive --production=false
 
 # Build frontend assets
-yarn run build && yarn version:libs
+# yarn run build && yarn version:libs
+NODE_ENV=development yarn ls:build && nx run labelstudio:build:development
+
+# yarn run watch
 
 # Step 3: Set up Python environment and install dependencies
 echo "Setting up Python environment..."
