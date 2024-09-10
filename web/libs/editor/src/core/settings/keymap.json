@@ -1,4 +1,40 @@
 {
+  "annotation:imagesync-zoom-in": {
+    "key": "ctrl++",
+    "description": "Zoom in"
+  },
+  "annotation:imagesync-zoom-out": {
+    "key": "ctrl+-",
+    "description": "Zoom out"
+  },
+  "annotation:imagesync-pan-up": {
+    "key": "up",
+    "description": "Pan image up"
+  },
+  "annotation:imagesync-pan-down": {
+    "key": "down",
+    "description": "Pan image down"
+  },
+  "annotation:imagesync-pan-left": {
+    "key": "left",
+    "description": "Pan image left"
+  },
+  "annotation:imagesync-pan-right": {
+    "key": "right",
+    "description": "Pan image right"
+  },
+  "annotation:imagesync-select-1": {
+    "key": "1",
+    "description": "Select image 1 as best"
+  },
+  "annotation:imagesync-select-2": {
+    "key": "2",
+    "description": "Select image 2 as best"
+  },
+  "annotation:imagesync-select-3": {
+    "key": "3",
+    "description": "Select image 3 as best"
+  },
   "audio:back": {
     "key": "ctrl+b",
     "mac": "command+b",

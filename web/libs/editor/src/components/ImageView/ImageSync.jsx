@@ -5,6 +5,9 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import _debounce from "lodash/debounce";
 import { parseValue } from "../../utils/data";
 
+
+const PAN_PCT = 0.03;
+
 class ImageSyncComponent extends Component {
   constructor(props) {
     super(props);
@@ -94,16 +97,20 @@ class ImageSyncComponent extends Component {
         ref.current.setTransform(position[0], position[1], scale);
       }
     });
+    console.log("[DBG] State:", JSON.stringify(this.state, null, 4));
   }
 
   handleZoomIn = () => {
     console.log("[DBG] handleZoomIn");
+    
+    console.log("[DBG] window height:", window.innerWidth, window.innerHeight);
     const { scale: oldScale, position: oldPosition } = this.state;
     const newScale = oldScale * 1.2;
   
     // Use the center of the view as the zoom point
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
+    const { width, height } = this.getImageDimensions();
+    const centerX = width / 2;
+    const centerY = height / 2;
     const newPositionX = centerX - (centerX - oldPosition[0]) * (newScale / oldScale);
     const newPositionY = centerY - (centerY - oldPosition[1]) * (newScale / oldScale);
   
@@ -115,12 +122,15 @@ class ImageSyncComponent extends Component {
   
   handleZoomOut = () => {
     console.log("[DBG] handleZoomOut");
+    console.log("[DBG] State:", JSON.stringify(this.state, null, 4));
     const { scale: oldScale, position: oldPosition } = this.state;
     const newScale = oldScale / 1.2;
   
     // Use the center of the view as the zoom point
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
+    console.log("[DBG] window height:", window.innerWidth, window.innerHeight);
+    const { width, height } = this.getImageDimensions();
+    const centerX = width / 2;
+    const centerY = height / 2;
     const newPositionX = centerX - (centerX - oldPosition[0]) * (newScale / oldScale);
     const newPositionY = centerY - (centerY - oldPosition[1]) * (newScale / oldScale);
   
@@ -132,6 +142,7 @@ class ImageSyncComponent extends Component {
 
   handleZoom = (ref, event) => {
     console.log("[DBG] handleZoom");
+    console.log("[DBG] State:", JSON.stringify(this.state, null, 4));
     const { scale: oldScale, position: oldPosition } = this.state;
     const { scale: newScale } = event.state;
     
@@ -153,7 +164,7 @@ class ImageSyncComponent extends Component {
 
   handleKeyPan = (deltaX, deltaY) => {
     const { width, height } = this.getImageDimensions();
-    const panFactor = Math.min(width, height) * 0.05; // 2% of the smaller dimension
+    const panFactor = Math.min(width, height) * PAN_PCT; // 2% of the smaller dimension
 
     this.setState(prevState => ({
       position: [
@@ -166,7 +177,6 @@ class ImageSyncComponent extends Component {
   getImageDimensions = () => {
     const img = this.containerRef?.querySelector('img');
     if (img) {
-      // console.log("img size:", img.width, img.height);
       return {
         width: img.width,
         height: img.height,
@@ -265,7 +275,7 @@ class ImageSyncComponent extends Component {
           {this.renderImage(this.getImageSource('image2'), this.image2Ref, 2)}
         </div>
       </div>
-      <div style={{ padding: '10px', display: 'flex', justifyContent: 'center', backgroundColor: '#f0f0f0', marginTop: '10px', borderRadius: '5px' }}>
+      {/* <div style={{ padding: '10px', display: 'flex', justifyContent: 'center', backgroundColor: '#f0f0f0', marginTop: '10px', borderRadius: '5px' }}>
         <h4 style={{ margin: '0 0 5px 0' }}>Keyboard Shortcuts:</h4>
         <ul style={{ margin: '0', paddingLeft: '20px' }}>
           <li>Use <strong>CTRL & +</strong> to zoom in</li>
@@ -273,7 +283,7 @@ class ImageSyncComponent extends Component {
           <li>Use <strong>Arrow keys</strong> to pan the images</li>
           <li>Use keys <strong>1 2 3</strong> to select the best image.</li>
         </ul>
-      </div>
+      </div> */}
     </Block>
     );
   }

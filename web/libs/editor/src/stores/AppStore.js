@@ -469,6 +469,79 @@ export default types
 
         selected.selectAreas(results);
       });
+
+      // ImageSync hotkeys
+      hotkeys.addNamed("annotation:imagesync-zoom-in", (e) => {
+        e.preventDefault();
+        const imageSyncComponent = self.annotationStore.selected?.imageSyncComponent;
+        if (imageSyncComponent) {
+          imageSyncComponent.handleZoomIn();
+        }
+      });
+
+      hotkeys.addNamed("annotation:imagesync-zoom-out", (e) => {
+        e.preventDefault();
+        const imageSyncComponent = self.annotationStore.selected?.imageSyncComponent;
+        if (imageSyncComponent) {
+          imageSyncComponent.handleZoomOut();
+        }
+      });
+
+      hotkeys.addNamed("annotation:imagesync-pan-up", (e) => {
+        e.preventDefault();
+        const imageSyncComponent = self.annotationStore.selected?.imageSyncComponent;
+        if (imageSyncComponent) {
+          imageSyncComponent.handleKeyPan(0, 1);
+        }
+      });
+
+      hotkeys.addNamed("annotation:imagesync-pan-down", (e) => {
+        e.preventDefault();
+        const imageSyncComponent = self.annotationStore.selected?.imageSyncComponent;
+        if (imageSyncComponent) {
+          imageSyncComponent.handleKeyPan(0, -1);
+        }
+      });
+
+      hotkeys.addNamed("annotation:imagesync-pan-left", (e) => {
+        e.preventDefault();
+        const imageSyncComponent = self.annotationStore.selected?.imageSyncComponent;
+        if (imageSyncComponent) {
+          imageSyncComponent.handleKeyPan(1, 0);
+        }
+      });
+
+      hotkeys.addNamed("annotation:imagesync-pan-right", (e) => {
+        e.preventDefault();
+        const imageSyncComponent = self.annotationStore.selected?.imageSyncComponent;
+        if (imageSyncComponent) {
+          imageSyncComponent.handleKeyPan(-1, 0);
+        }
+      });
+
+      hotkeys.addNamed("annotation:imagesync-select-1", (e) => {
+        e.preventDefault();
+        const imageSyncComponent = self.annotationStore.selected?.imageSyncComponent;
+        if (imageSyncComponent) {
+          imageSyncComponent.handleImageSelection(1);
+        }
+      });
+
+      hotkeys.addNamed("annotation:imagesync-select-2", (e) => {
+        e.preventDefault();
+        const imageSyncComponent = self.annotationStore.selected?.imageSyncComponent;
+        if (imageSyncComponent) {
+          imageSyncComponent.handleImageSelection(2);
+        }
+      });
+
+      hotkeys.addNamed("annotation:imagesync-select-3", (e) => {
+        e.preventDefault();
+        const imageSyncComponent = self.annotationStore.selected?.imageSyncComponent;
+        if (imageSyncComponent) {
+          imageSyncComponent.handleImageSelection(3);
+        }
+      });
     }
 
     function setTaskHistory(taskHistory) {
