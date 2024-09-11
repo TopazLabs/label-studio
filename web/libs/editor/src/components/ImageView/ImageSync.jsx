@@ -21,6 +21,7 @@ class ImageSyncComponent extends Component {
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleWheel = this.handleWheel.bind(this);
     this.getMousePositionOnImage = this.getMousePositionOnImage.bind(this);
+    console.log("Props:", props);
   }
 
   componentDidMount() {
@@ -89,19 +90,19 @@ class ImageSyncComponent extends Component {
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault();
-          this.handleKeyPan(0, PAN_PXLS);
+          this.handleKeyPan(0, PAN_PXLS / this.state.scale);
           break;
         case 'ArrowDown':
           e.preventDefault();
-          this.handleKeyPan(0, -PAN_PXLS);
+          this.handleKeyPan(0, -PAN_PXLS / this.state.scale);
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          this.handleKeyPan(PAN_PXLS, 0);
+          this.handleKeyPan(PAN_PXLS / this.state.scale, 0);
           break;
         case 'ArrowRight':
           e.preventDefault();
-          this.handleKeyPan(-PAN_PXLS, 0);
+          this.handleKeyPan(-PAN_PXLS / this.state.scale, 0);
           break;
         default:
           break;
@@ -302,33 +303,83 @@ class ImageSyncComponent extends Component {
   render() {
     const { item } = this.props;
 
+    const buttonStyle = {
+      padding: '8px 16px',
+      margin: '0 5px',
+      backgroundColor: '#f0f0f0',
+      border: '1px solid #ccc',
+      borderRadius: '4px',
+      cursor: 'pointer',
+      fontSize: '16px',
+      transition: 'background-color 0.3s',
+    };
+
+    const buttonHoverStyle = {
+      ...buttonStyle,
+      backgroundColor: '#e0e0e0',
+    };
+
     return (
       <Block 
         name="imagesync" 
-        style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          backgroundColor: '#f8f8f8',
+        }}
         tabIndex={0}
         ref={this.containerRef}
         onWheel={this.handleWheel}
         onMouseDown={this.handleMouseDown}
       >
-        <div style={{ padding: '10px', display: 'flex', justifyContent: 'center' }}>
-          <button onClick={this.handleZoomIn}>+</button>
-          <button onClick={this.handleZoomOut}>-</button>
-          <button onClick={this.handleReset}>Reset</button>
+        <div style={{ 
+          padding: '15px', 
+          display: 'flex', 
+          justifyContent: 'center',
+          borderBottom: '1px solid #e0e0e0',
+        }}>
+          <button onClick={this.handleZoomIn} style={buttonStyle} onMouseOver={(e) => e.target.style = buttonHoverStyle} onMouseOut={(e) => e.target.style = buttonStyle}>+</button>
+          <button onClick={this.handleZoomOut} style={buttonStyle} onMouseOver={(e) => e.target.style = buttonHoverStyle} onMouseOut={(e) => e.target.style = buttonStyle}>-</button>
+          <button onClick={this.handleReset} style={buttonStyle} onMouseOver={(e) => e.target.style = buttonHoverStyle} onMouseOut={(e) => e.target.style = buttonStyle}>Reset</button>
         </div>
-        <div style={{ display: 'flex', flexGrow: 1, gap: '5px', padding: '0', margin: '0' }}>
-          <div data-image-index={0} style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '0', margin: '0' }}>
-            <h3 style={{ margin: '0 0 5px 0' }}>Reference Image:</h3>
-            {this.renderImage(this.getImageSource('image0'), 0)}
-          </div>
-          <div data-image-index={1} style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '0', margin: '0', height: '100%' }}>
-            <h3 style={{ margin: '0 0 5px 0' }}>Enhanced 1:</h3>
-            {this.renderImage(this.getImageSource('image1'), 1)}
-          </div>
-          <div data-image-index={2} style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '0', margin: '0', height: '100%' }}>
-            <h3 style={{ margin: '0 0 5px 0' }}>Enhanced 2:</h3>
-            {this.renderImage(this.getImageSource('image2'), 2)}
-          </div>
+        <div style={{ 
+          display: 'flex', 
+          flexGrow: 1, 
+          gap: '0', 
+          padding: '0', 
+          margin: '0',
+          borderTop: '1px solid #e0e0e0',
+        }}>
+          {['Reference Image:', 'Enhanced 1:', 'Enhanced 2:'].map((title, index) => (
+            <div 
+              key={index}
+              data-image-index={index} 
+              style={{ 
+                flex: 1, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                width: '100%', 
+                padding: '15px', 
+                margin: '0', 
+                height: '100%',
+                borderRight: index < 2 ? '1px solid #e0e0e0' : 'none',
+                borderLeft: index > 0 ? '1px solid #e0e0e0' : 'none',
+              }}
+            >
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#333' }}>{title}</h3>
+              <div style={{ 
+                flex: 1, 
+                border: '1px solid #e0e0e0', 
+                borderRadius: '4px', 
+                overflow: 'hidden',
+                backgroundColor: '#fff',
+              }}>
+                {this.renderImage(this.getImageSource(`image${index}`), index)}
+              </div>
+            </div>
+          ))}
         </div>
       </Block>
     );
