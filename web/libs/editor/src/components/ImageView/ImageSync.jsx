@@ -11,12 +11,16 @@ class ImageSyncComponent extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      // Image State:
       scale: 1,
       position: [0, 0],
+      minZoom: 0.5,
+      maxZoom: 10,
       imagesFitted: false,
+
+      // Component State
       isDragging: false,
       lastMousePosition: [0, 0],
-      current_selection: this.getCurrentSelectionFromAnnotations(),
     };
     this.containerRef = React.createRef();
     this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -27,6 +31,11 @@ class ImageSyncComponent extends Component {
     // console.log("Annotation Store:", JSON.stringify(props.store.annotationStore, null, 4))
     // console.log("Annotations:", JSON.stringify(props.store.annotationStore.annotations, null, 4));
   }
+
+
+  /////////////////////////////////////
+  // INITALIZATION METHODS ///////////
+  ///////////////////////////////////
 
   componentDidMount() {
     document.addEventListener('keydown', this.handleKeyDown);
@@ -61,42 +70,13 @@ class ImageSyncComponent extends Component {
     });
   }
 
-  getCurrentSelectionFromAnnotations() {
-    const { store } = this.props;
-    if (store && store.annotationStore && store.annotationStore.annotations) {
-      const annotations = store.annotationStore.annotations;
-      if (annotations.length > 0) {
-        const areas = annotations[0].trackedState.areas;
-        const areaKey = Object.keys(areas)[0];
-        if (areas[areaKey] && areas[areaKey].results) {
-          const result = areas[areaKey].results.find(r => r.from_name === "model_selected");
-          if (result && result.value && result.value.choices) {
-            const choice = result.value.choices[0];
-            return parseInt(choice.split('/')[0]);
-          }
-        }
-      }
-    }
-    return null;
-  }
+
+  ///////////////////////////////
+  // HANDLER METHODS ///////////
+  ////////////////////////////
 
   handleResize = () => {
     this.fitImagesToColumns();
-  }
-
-  fitImagesToColumns = () => {
-    const containerWidth = this.containerRef.current.clientWidth / 3; // Assuming 3 columns
-    const images = document.querySelectorAll('.synced-image');
-    
-    images.forEach(img => {
-      const aspectRatio = img.naturalWidth / img.naturalHeight;
-      const newHeight = containerWidth / aspectRatio;
-      
-      img.style.width = `${containerWidth}px`;
-      img.style.height = `${newHeight}px`;
-    });
-
-    this.setState({ scale: 1, position: [0, 0], imagesFitted: true });
   }
 
   handleImageDoubleClick = (index) => {
@@ -159,7 +139,7 @@ class ImageSyncComponent extends Component {
     e.stopPropagation();
 
     const delta = e.deltaY * -0.001;
-    const newScale = Math.max(0.1, Math.min(this.state.scale * (1 + delta), 10));
+    const newScale = Math.max(this.state.minZoom, Math.min(this.state.scale * (1 + delta), this.state.maxZoom));
     
     const rect = this.containerRef.current.getBoundingClientRect();
 
@@ -174,38 +154,28 @@ class ImageSyncComponent extends Component {
     // Get mouse position for the current image
     const position = this.getMousePositionOnImage(event, imageIndex);
     // console.log('Mouse position:', position);
-    
-    
-    
-    // const mouseX = e.clientX - rect.left;
-    // const mouseY = e.clientY - rect.top;
-
-
-    // console.log("[DBG] Event:", e, "\n", "Rect:", rect);
-
-    // const newPositionX = (position.x - (position.x - this.state.position[0])) * (newScale / this.state.scale);
-    // const newPositionY = (position.y - (position.y - this.state.position[1])) * (newScale / this.state.scale);
 
     this.setState(prevState => ({
-      scale: Math.max(0.5, Math.min(10.0, newScale))
+      scale: newScale
     }));
-    // this.setState({
-    //   scale: newScale,
-    //   position: [newPositionX, newPositionY]
-    // });
   }
 
   handleZoomIn = () => {
     this.setState(prevState => ({
-      scale: Math.min(10.0, prevState.scale * 1.2)
+      scale: Math.min(this.state.maxZoom, prevState.scale * 1.2)
     }));
   };
 
   handleZoomOut = () => {
     this.setState(prevState => ({
-      scale: Math.max(0.5, prevState.scale / 1.2)
+      scale: Math.max(this.state.minZoom, prevState.scale / 1.2)
     }));
-  };
+  }
+  
+  handleZoomChange = (e) => {
+    const newScale = parseFloat(e.target.value);
+    this.setState({ scale: newScale });
+  }
 
   handleKeyPan = (deltaX, deltaY) => {
     this.setState(prevState => ({
@@ -237,37 +207,18 @@ class ImageSyncComponent extends Component {
     }
   }
 
-  getMousePositionOnImage = (event, imageIndex) => {
-    const { scale, position } = this.state;
-    const image = document.querySelector(`.synced-image-${imageIndex}`);
-    const container = image.parentElement;
-  
-    // Get the bounding rectangles
-    const containerRect = container.getBoundingClientRect();
-    const imageRect = image.getBoundingClientRect();
-  
-    // Calculate the actual image dimensions considering the scale
-    const actualImageWidth = imageRect.width / scale;
-    const actualImageHeight = imageRect.height / scale;
-  
-    // Calculate the offset of the image within the container
-    const imageOffsetX = (containerRect.width - actualImageWidth) / 2;
-    const imageOffsetY = (containerRect.height - actualImageHeight) / 2;
-  
-    // Calculate the mouse position relative to the image
-    let x = (event.clientX - containerRect.left - imageOffsetX - position[0]) / scale;
-    let y = (event.clientY - containerRect.top - imageOffsetY - position[1]) / scale;
-  
-    // Ensure the coordinates are within the image bounds
-    x = Math.max(0, Math.min(x, image.naturalWidth));
-    y = Math.max(0, Math.min(y, image.naturalHeight));
-  
-    return { x: Math.round(x), y: Math.round(y) };
-  };
-
   handleReset = () => {
     this.fitImagesToColumns();
   }
+
+  handleZoomChange = (e) => {
+    const newScale = parseFloat(e.target.value);
+    this.setState({ scale: newScale });
+  }
+  
+  //////////////////////////////////
+  // FUNCTIONAL METHODS ///////////
+  ///////////////////////////////
 
   constrainPosition(x, y, scale) {
     const imageContainer = event.target.closest('[data-image-index]');
@@ -314,6 +265,37 @@ class ImageSyncComponent extends Component {
     document.dispatchEvent(event);
   }
   
+  fitImagesToColumns = () => {
+    const containerWidth = this.containerRef.current.clientWidth / 3; // Assuming 3 columns
+    const images = document.querySelectorAll('.synced-image');
+    
+    images.forEach(img => {
+      const aspectRatio = img.naturalWidth / img.naturalHeight;
+      const newHeight = containerWidth / aspectRatio;
+      
+      img.style.width = `${containerWidth}px`;
+      img.style.height = `${newHeight}px`;
+    });
+
+    this.setState({ scale: 1, position: [0, 0], imagesFitted: true });
+  }
+
+  updateAllTransforms = () => {
+    // Update the transform of all images based on the new scale and position
+    const { scale, position } = this.state;
+    const transform = `scale(${scale}) translate(${position[0]}px, ${position[1]}px)`;
+    
+    this.imageRefs.forEach(ref => {
+      if (ref.current) {
+        ref.current.style.transform = transform;
+      }
+    });
+  }
+
+  //////////////////////////////
+  // GETTER METHODS ///////////
+  ////////////////////////////
+  
   getImageDimensions = () => {
     const img = this.containerRef?.querySelector('img');
     if (img) {
@@ -323,12 +305,64 @@ class ImageSyncComponent extends Component {
       };
     }
     return { width: 1, height: 1 };
-  };
+  }
+
+  getMousePositionOnImage = (event, imageIndex) => {
+    const { scale, position } = this.state;
+    const image = document.querySelector(`.synced-image-${imageIndex}`);
+    const container = image.parentElement;
+  
+    // Get the bounding rectangles
+    const containerRect = container.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+  
+    // Calculate the actual image dimensions considering the scale
+    const actualImageWidth = imageRect.width / scale;
+    const actualImageHeight = imageRect.height / scale;
+  
+    // Calculate the offset of the image within the container
+    const imageOffsetX = (containerRect.width - actualImageWidth) / 2;
+    const imageOffsetY = (containerRect.height - actualImageHeight) / 2;
+  
+    // Calculate the mouse position relative to the image
+    let x = (event.clientX - containerRect.left - imageOffsetX - position[0]) / scale;
+    let y = (event.clientY - containerRect.top - imageOffsetY - position[1]) / scale;
+  
+    // Ensure the coordinates are within the image bounds
+    x = Math.max(0, Math.min(x, image.naturalWidth));
+    y = Math.max(0, Math.min(y, image.naturalHeight));
+  
+    return { x: Math.round(x), y: Math.round(y) };
+  }
+
+  getCurrentSelectionFromAnnotations() {
+    const { store } = this.props;
+    if (store && store.annotationStore && store.annotationStore.annotations) {
+      const annotations = store.annotationStore.annotations;
+      if (annotations.length > 0) {
+        const areas = annotations[0].trackedState.areas;
+        const areaKey = Object.keys(areas)[0];
+        if (areas[areaKey] && areas[areaKey].results) {
+          const result = areas[areaKey].results.find(r => r.from_name === "model_selected");
+          if (result && result.value && result.value.choices) {
+            const choice = result.value.choices[0];
+            return parseInt(choice.split('/')[0]);
+          }
+        }
+      }
+    }
+    return null;
+  }
 
   getImageSource = (imageName) => {
     const { item, store } = this.props;
     return parseValue(item[imageName], store.task.dataObj);
-  };
+  }
+
+
+  ////////////////////////////////
+  // VISUAL INTERFACE ///////////
+  //////////////////////////////
 
   renderImage = (src, index) => {
     const { scale, position } = this.state;
@@ -360,6 +394,14 @@ class ImageSyncComponent extends Component {
 
   render() {
     const { item } = this.props;
+
+    const { scale, minZoom, maxZoom } = this.state;
+
+    const sliderStyle = {
+      width: '200px',
+      margin: '0 10px',
+      zIndex: 9
+    };
 
     const buttonStyle = {
       padding: '8px 16px',
@@ -396,11 +438,21 @@ class ImageSyncComponent extends Component {
           padding: '15px', 
           display: 'flex', 
           justifyContent: 'center',
+          alignItems: 'center',
           borderBottom: '1px solid #e0e0e0',
         }}>
-          <button onClick={this.handleZoomIn} style={buttonStyle} onMouseOver={(e) => e.target.style = buttonHoverStyle} onMouseOut={(e) => e.target.style = buttonStyle}>+</button>
-          <button onClick={this.handleZoomOut} style={buttonStyle} onMouseOver={(e) => e.target.style = buttonHoverStyle} onMouseOut={(e) => e.target.style = buttonStyle}>-</button>
-          <button onClick={this.handleReset} style={buttonStyle} onMouseOver={(e) => e.target.style = buttonHoverStyle} onMouseOut={(e) => e.target.style = buttonStyle}>Reset</button>
+          <span>Zoom: </span>
+          <input 
+            type="range" 
+            min={minZoom} 
+            max={maxZoom} 
+            step="0.1"
+            value={scale}
+            onChange={this.handleZoomChange}
+            style={sliderStyle}
+          />
+          <span>{scale.toFixed(1)}x</span>
+          <button onClick={this.handleReset} style={buttonStyle}>Reset</button>
         </div>
         <div style={{ 
           display: 'flex', 
