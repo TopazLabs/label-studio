@@ -16,12 +16,16 @@ class ImageSyncComponent extends Component {
       imagesFitted: false,
       isDragging: false,
       lastMousePosition: [0, 0],
+      current_selection: this.getCurrentSelectionFromAnnotations(),
     };
     this.containerRef = React.createRef();
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleWheel = this.handleWheel.bind(this);
     this.getMousePositionOnImage = this.getMousePositionOnImage.bind(this);
-    console.log("Props:", props);
+    // console.log("Props:", props);
+    // console.log("Task:", props.store.task);
+    // console.log("Annotation Store:", JSON.stringify(props.store.annotationStore, null, 4))
+    // console.log("Annotations:", JSON.stringify(props.store.annotationStore.annotations, null, 4));
   }
 
   componentDidMount() {
@@ -57,6 +61,25 @@ class ImageSyncComponent extends Component {
     });
   }
 
+  getCurrentSelectionFromAnnotations() {
+    const { store } = this.props;
+    if (store && store.annotationStore && store.annotationStore.annotations) {
+      const annotations = store.annotationStore.annotations;
+      if (annotations.length > 0) {
+        const areas = annotations[0].trackedState.areas;
+        const areaKey = Object.keys(areas)[0];
+        if (areas[areaKey] && areas[areaKey].results) {
+          const result = areas[areaKey].results.find(r => r.from_name === "model_selected");
+          if (result && result.value && result.value.choices) {
+            const choice = result.value.choices[0];
+            return parseInt(choice.split('/')[0]);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   handleResize = () => {
     this.fitImagesToColumns();
   }
@@ -74,6 +97,11 @@ class ImageSyncComponent extends Component {
     });
 
     this.setState({ scale: 1, position: [0, 0], imagesFitted: true });
+  }
+
+  handleImageDoubleClick = (index) => {
+    // console.log(`Double click detected on image ${index + 1}`);
+    this.simulateKeyPress(index + 1);
   }
 
   handleKeyDown(e) {
@@ -104,6 +132,22 @@ class ImageSyncComponent extends Component {
           e.preventDefault();
           this.handleKeyPan(-PAN_PXLS / this.state.scale, 0);
           break;
+        // case "1":
+        // case "2":
+        // case "3": {
+        //   const key = parseInt(e.key);
+        //   if ([1, 2, 3].includes(key)) {
+        //     this.setState(prevState => {
+        //       const newSelection = prevState.current_selection === key - 1 ? null : key - 1;
+        //       console.log(`Current selection updated to: ${newSelection}`);
+        //       return { current_selection: newSelection };
+        //     });
+        //   }
+        //   // console.log("Annotation Store:", JSON.stringify(props.store.annotationStore, null, 4))
+        //   // console.log("Annotations:", JSON.stringify(props.store.annotationStore.annotations, null, 4));
+        //   break;
+        // }       
+
         default:
           break;
       }
@@ -258,6 +302,17 @@ class ImageSyncComponent extends Component {
       Math.max(-maxY, Math.min(maxY, y))
     ];
   }
+
+  simulateKeyPress = (key) => {
+    const event = new KeyboardEvent('keydown', {
+      key: key.toString(),
+      keyCode: key + 48, // ASCII code for '1' is 49, '2' is 50, '3' is 51
+      which: key + 48,
+      bubbles: true,
+      cancelable: true
+    });
+    document.dispatchEvent(event);
+  }
   
   getImageDimensions = () => {
     const img = this.containerRef?.querySelector('img');
@@ -280,7 +335,10 @@ class ImageSyncComponent extends Component {
     const transform = `scale(${scale}) translate(${position[0]}px, ${position[1]}px)`;
 
     return (
-      <div style={{ width: '100%', paddingBottom: '50%', position: 'relative', overflow: 'hidden' }}>
+      <div 
+        style={{ width: '100%', paddingBottom: '50%', position: 'relative', overflow: 'hidden' }}
+        onDoubleClick={() => this.handleImageDoubleClick(index)}
+      >
         <img
           alt={`synced image ${index}`}
           src={src}
