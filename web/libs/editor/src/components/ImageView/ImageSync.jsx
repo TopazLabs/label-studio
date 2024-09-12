@@ -212,7 +212,7 @@ class ImageSyncComponent extends Component {
       const deltaY = e.clientY - this.state.lastMousePosition[1];
 
       this.setState(prevState => ({
-        position: this.constrainPosition(prevState.position[0] + deltaX, prevState.position[1] + deltaY, prevState.scale),
+        position: this.constrainPosition(prevState.position[0] + (deltaX / prevState.scale), prevState.position[1] + (deltaY /  prevState.scale), prevState.scale),
         lastMousePosition: [e.clientX, e.clientY]
       }));
     }
