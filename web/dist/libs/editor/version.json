@@ -1,6 +1,6 @@
 {
-  "message": "fix: OPTIC-960: Improve the bundling strategy and ship a single entrypoint with a common vendor chunk across all libs (#6163)",
-  "commit": "4aead5381e55dec90a64f7af543147ae8f43a246",
-  "date": "2024-08-30T16:04:34.000Z",
+  "message": "update with proper zoom",
+  "commit": "6d81f6848586ffcbc7cd69f74171dc5e0bf28434",
+  "date": "2024-09-10T17:24:08.000Z",
   "branch": "develop"
 }

@@ -6,6 +6,7 @@ import debounce from 'lodash/debounce';
 
 const PAN_PXLS = 30;
 const MIN_VISIBLE_RATIO = 0.01;
+const POLL_INTERVAL_MS = 300;
 
 class ImageSyncComponent extends Component {
   constructor(props) {
@@ -21,8 +22,16 @@ class ImageSyncComponent extends Component {
       // Component State
       isDragging: false,
       lastMousePosition: [0, 0],
+
+      // UI State:
+      choices: [],
     };
     this.containerRef = React.createRef();
+    
+    // FIXME: temp solution uses a timer to determine when the state of the checkboxes change. 
+    // For future, it would be useful to modify the props.store coming into this component so that it can recieve that info directly from the view.
+    this.pollInterval = null; 
+
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleWheel = this.handleWheel.bind(this);
     this.getMousePositionOnImage = this.getMousePositionOnImage.bind(this);
@@ -44,6 +53,7 @@ class ImageSyncComponent extends Component {
     document.addEventListener('mousemove', this.handleMouseMove);
     this.containerRef.current.addEventListener('wheel', this.handleWheel, { passive: false });
     this.fitImagesToColumns();
+    this.startPolling();
   }
 
   componentWillUnmount() {
@@ -52,6 +62,7 @@ class ImageSyncComponent extends Component {
     document.removeEventListener('mouseup', this.handleMouseUp);
     document.removeEventListener('mousemove', this.handleMouseMove);
     this.containerRef.current.removeEventListener('wheel', this.handleWheel);
+    this.stopPolling();
   }
 
   addWheelListeners() {
@@ -70,6 +81,16 @@ class ImageSyncComponent extends Component {
     });
   }
 
+  startPolling = () => {
+    this.pollInterval = setInterval(this.updateChoices, POLL_INTERVAL_MS); // Check every 500ms
+  }
+
+  stopPolling = () => {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+    }
+  }
+
 
   ///////////////////////////////
   // HANDLER METHODS ///////////
@@ -79,8 +100,14 @@ class ImageSyncComponent extends Component {
     this.fitImagesToColumns();
   }
 
+  handleCheckboxChange(event) {
+    if (event.target.matches('.lsf-choices input[type="checkbox"]')) {
+      console.log('Change event detected', event.target);
+      this.updateChoices();
+    }
+  }
+
   handleImageDoubleClick = (index) => {
-    // console.log(`Double click detected on image ${index + 1}`);
     this.simulateKeyPress(index + 1);
   }
 
@@ -112,22 +139,6 @@ class ImageSyncComponent extends Component {
           e.preventDefault();
           this.handleKeyPan(-PAN_PXLS / this.state.scale, 0);
           break;
-        // case "1":
-        // case "2":
-        // case "3": {
-        //   const key = parseInt(e.key);
-        //   if ([1, 2, 3].includes(key)) {
-        //     this.setState(prevState => {
-        //       const newSelection = prevState.current_selection === key - 1 ? null : key - 1;
-        //       console.log(`Current selection updated to: ${newSelection}`);
-        //       return { current_selection: newSelection };
-        //     });
-        //   }
-        //   // console.log("Annotation Store:", JSON.stringify(props.store.annotationStore, null, 4))
-        //   // console.log("Annotations:", JSON.stringify(props.store.annotationStore.annotations, null, 4));
-        //   break;
-        // }       
-
         default:
           break;
       }
@@ -292,6 +303,21 @@ class ImageSyncComponent extends Component {
     });
   }
 
+  updateChoices = () => {
+    const choicesContainer = document.querySelector('.lsf-choices');
+    if (choicesContainer) {
+      const newChoices = Array.from(choicesContainer.children).map(choice => {
+        const checkbox = choice.querySelector('input[type="checkbox"]');
+        return checkbox ? checkbox.checked : false;
+      });
+
+      // Only update state if choices have changed
+      if (JSON.stringify(newChoices) !== JSON.stringify(this.state.choices)) {
+        this.setState({ choices: newChoices });
+      }
+    }
+  }
+
   //////////////////////////////
   // GETTER METHODS ///////////
   ////////////////////////////
@@ -390,12 +416,22 @@ class ImageSyncComponent extends Component {
         />
       </div>
     );
-  };
+  }
+
+  renderChoices() {
+    // This method assumes the choices HTML is available in the DOM
+    // You might need to adjust this based on how the choices are actually rendered
+    const choicesContainer = document.querySelector('.lsf-choices');
+    if (!choicesContainer) return null;
+
+    const choices = Array.from(choicesContainer.children).map(choice => choice.querySelector('.lsf-choice'));
+    return choices;
+  }
 
   render() {
     const { item } = this.props;
 
-    const { scale, minZoom, maxZoom } = this.state;
+    const { scale, minZoom, maxZoom, choices } = this.state;
 
     const sliderStyle = {
       width: '200px',
@@ -431,8 +467,8 @@ class ImageSyncComponent extends Component {
         }}
         tabIndex={0}
         ref={this.containerRef}
-        onWheel={this.handleWheel}
-        onMouseDown={this.handleMouseDown}
+        // onWheel={this.handleWheel}
+        // onMouseDown={this.handleMouseDown}
       >
         <div style={{ 
           padding: '15px', 
@@ -466,6 +502,8 @@ class ImageSyncComponent extends Component {
             <div 
               key={index}
               data-image-index={index} 
+              onWheel={this.handleWheel}
+              onMouseDown={this.handleMouseDown}
               style={{ 
                 flex: 1, 
                 display: 'flex', 
@@ -476,6 +514,8 @@ class ImageSyncComponent extends Component {
                 height: '100%',
                 borderRight: index < 2 ? '1px solid #e0e0e0' : 'none',
                 borderLeft: index > 0 ? '1px solid #e0e0e0' : 'none',
+                backgroundColor: choices[index] ? 'rgba(0, 255, 0, 0.1)' : 'transparent', // Green background if selected
+                transition: 'background-color 0.3s ease', // Smooth transition for background color change
               }}
             >
               <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#333' }}>{title}</h3>
