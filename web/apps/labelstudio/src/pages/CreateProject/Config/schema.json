@@ -2298,6 +2298,36 @@
       }
     }
   },
+  "VideoSync": {
+    "name": "VideoSync",
+    "description": "The VideoSync tag synchronizes transforms for multiple Videos.",
+    "attrs": {
+      "video0": {
+        "name": "video0",
+        "description": "URL or path to the reference Video",
+        "type": "string",
+        "required": true
+      },
+      "video1": {
+        "name": "video1",
+        "description": "URL or path to the first comparison Video",
+        "type": "string",
+        "required": true
+      },
+      "video2": {
+        "name": "video2",
+        "description": "URL or path to the second comparison Video",
+        "type": "string",
+        "required": true
+      },
+      "framerate": {
+        "name": "framerate",
+        "description": "framerate of Videos to sync",
+        "type": "string",
+        "required": false
+      }
+    }
+  },
   "TimeSeriesLabels": {
     "name": "TimeSeriesLabels",
     "description": "The `TimeSeriesLabels` tag is used to create a labeled time range.\n\nUse with the following data types: time series.",
@@ -2535,6 +2565,7 @@
       "HyperText",
       "Image",
       "ImageSync",
+      "VideoSync",
       "List",
       "Paragraphs",
       "Table",

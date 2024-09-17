@@ -119,6 +119,7 @@
         "Choice": {"$ref": "#/definitions/MaybeMultipleChoice"},
         "Image": {"$ref": "#/definitions/tags_with_value_required_name"},
         "ImageSync": {"$ref": "#/definitions/MaybeMultipleImageSync"},
+        "VideoSync": {"$ref": "#/definitions/MaybeMultipleVideoSync"},
         "Text": {"$ref": "#/definitions/tags_with_value_required_name"},
         "HyperText": {"$ref": "#/definitions/tags_with_value_required_name"},
         "View": {"$ref": "#/definitions/MaybeMultipleView"},
@@ -161,6 +162,36 @@
         "type": "array",
         "items": {"$ref": "#/definitions/ImageSync"}
       }, {"$ref": "#/definitions/ImageSync"}]
+    },
+    "VideoSync": {
+      "type": "object",
+      "required": ["@name", "@video0", "@video1", "@video2"],
+      "properties": {
+        "@name": {
+          "$ref": "#/definitions/@name"
+        },
+        "@video0": {
+          "type": "string"
+        },
+        "@video1": {
+          "type": "string"
+        },
+        "@video2": {
+          "type": "string"
+        },
+        "@framerate": {
+          "type": "string"
+        },
+        "$": {
+          "$ref": "#/definitions/$"
+        }
+      }
+    },
+    "MaybeMultipleVideoSync": {
+      "anyOf": [{
+        "type": "array",
+        "items": {"$ref": "#/definitions/VideoSync"}
+      }, {"$ref": "#/definitions/VideoSync"}]
     },
     "Choice": {
       "$ref": "#/definitions/tag_with_value"
@@ -282,7 +313,8 @@
         "HyperText": {"$ref": "#/definitions/tags_with_value_required_name"},
         "TextArea": {"$ref": "#/definitions/MaybeMultipleTextAreas"},
         "Number": {"$ref": "#/definitions/tags_with_name_and_toname"},
-        "ImageSync": {"$ref": "#/definitions/MaybeMultipleImageSync"}
+        "ImageSync": {"$ref": "#/definitions/MaybeMultipleImageSync"},
+        "VideoSync": {"$ref": "#/definitions/MaybeMultipleVideoSync"}
       }
     }
   }

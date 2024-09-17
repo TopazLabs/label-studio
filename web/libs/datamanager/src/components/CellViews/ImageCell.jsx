@@ -6,6 +6,11 @@ const imgDefaultProps = {};
 
 if (isFF(FF_LSDV_4711)) imgDefaultProps.crossOrigin = "anonymous";
 
+// Add a function to create a thumbnail URL
+const createThumbnailUrl = (originalUrl, width = 100, height = 100) => {
+  return `${originalUrl}?width=${width}&height=${height}`;
+};
+
 export const ImageCell = (column) => {
   const {
     original,
@@ -19,11 +24,13 @@ export const ImageCell = (column) => {
 
   if (!imgSrc) return null;
 
+  const thumbnailSrc = createThumbnailUrl(imgSrc);
+
   return renderImagePreview ? (
     <img
       {...imgDefaultProps}
-      key={imgSrc}
-      src={imgSrc}
+      key={thumbnailSrc}
+      src={thumbnailSrc}
       alt="Data"
       style={{
         maxHeight: "100%",

@@ -67,6 +67,35 @@ const OBJECTS = {
       },
     },
   },
+  VideoSync: {
+    type: "VideoSync",
+    settings: {
+      video0: {
+        title: "Reference Video",
+        type: String,
+        param: ($obj, value) => $obj.setAttribute("video0", value),
+        value: ($obj) => $obj.getAttribute("video0"),
+      },
+      video1: {
+        title: "Video 1",
+        type: String,
+        param: ($obj, value) => $obj.setAttribute("video1", value),
+        value: ($obj) => $obj.getAttribute("video1"),
+      },
+      video2: {
+        title: "Video 2",
+        type: String,
+        param: ($obj, value) => $obj.setAttribute("video2", value),
+        value: ($obj) => $obj.getAttribute("video2"),
+      },
+      framerate: {
+        title: "frame rate",
+        type: Number,
+        param: ($obj, value) => $obj.setAttribute("framerate", value),
+        value: ($obj) => parseInt($obj.getAttribute("framerate") || "120"),
+      },
+    },
+  },
   HyperText: {
     type: "HyperText",
   },

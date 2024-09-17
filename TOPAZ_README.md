@@ -202,6 +202,19 @@ In `web/apps/labelstudio/src/pages/CreateProject/Config/schema.json`, add your n
 }
 ```
 
+Also, in the same file edit the View children list to include it:
+```json
+"View": {
+        // ... Existing definitions...
+    "children": [
+        // ... existing children ...
+        "CustomComponent",
+        // ... Rest of existing children ...
+    ],
+    // ... Rest of existing definitions ...
+}
+```
+
 #### Step 6: Add to Object Types
 
 In `web/apps/labelstudio/src/pages/CreateProject/Config/tags.js`, add your component to the `OBJECTS` constant:
@@ -256,9 +269,6 @@ const Model = types.model({
 });
 ```
 
-## Topaz Components
-
-### ImageSync
 
 Example usage:
 

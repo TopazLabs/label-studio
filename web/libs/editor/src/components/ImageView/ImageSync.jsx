@@ -3,6 +3,7 @@ import { observer } from "mobx-react";
 import { Block } from "../../utils/bem";
 import { parseValue } from "../../utils/data";
 import debounce from 'lodash/debounce';
+import './ImageSync.css'; 
 
 const PAN_PXLS = 30;
 const MIN_VISIBLE_RATIO = 0.01;
@@ -22,15 +23,19 @@ class ImageSyncComponent extends Component {
       // Component State
       isDragging: false,
       lastMousePosition: [0, 0],
+      controlsVisible: false,
+
 
       // UI State:
       choices: [],
     };
     this.containerRef = React.createRef();
+    this.imageRefs = [React.createRef(), React.createRef(), React.createRef()];
     
     // FIXME: temp solution uses a timer to determine when the state of the checkboxes change. 
     // For future, it would be useful to modify the props.store coming into this component so that it can recieve that info directly from the view.
     this.pollInterval = null; 
+    this.mouseLeaveTimer = null;
 
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleWheel = this.handleWheel.bind(this);
@@ -119,6 +124,10 @@ class ImageSyncComponent extends Component {
       } else if (e.key === '-') {
         e.preventDefault();
         this.handleZoomOut();
+      }
+      else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        this.handleReset();
       }
     } else {
 
@@ -215,6 +224,18 @@ class ImageSyncComponent extends Component {
         position: this.constrainPosition(prevState.position[0] + (deltaX / prevState.scale), prevState.position[1] + (deltaY /  prevState.scale), prevState.scale),
         lastMousePosition: [e.clientX, e.clientY]
       }));
+    }
+    else {
+      const { clientY } = event;
+      const { innerHeight } = window;
+      const threshold = innerHeight - 300; // Show controls when mouse is within 300px of the bottom
+
+      if (clientY > threshold && !this.state.controlsVisible) {
+        this.showControls();
+      } 
+      else if (clientY <= threshold && this.state.controlsVisible) {
+        this.hideControls();
+      }
     }
   }
 
@@ -318,6 +339,23 @@ class ImageSyncComponent extends Component {
     }
   }
 
+  
+  showControls = () => {
+    console.log("SHOW CONTROLS");
+    this.setState({ controlsVisible: true });
+    if (this.mouseLeaveTimer) {
+      clearTimeout(this.mouseLeaveTimer);
+      this.mouseLeaveTimer = null;
+    }
+  }
+
+  hideControls = () => {
+    console.log("HIDE CONTROLS");
+    this.mouseLeaveTimer = setTimeout(() => {
+      this.setState({ controlsVisible: false });
+    }, 2000); // Hide controls after 2 seconds
+  }
+
   //////////////////////////////
   // GETTER METHODS ///////////
   ////////////////////////////
@@ -332,6 +370,39 @@ class ImageSyncComponent extends Component {
     }
     return { width: 1, height: 1 };
   }
+
+  calculateFramePercentage(scale, imageIndex) {
+    const container = document.querySelector('.imagesync-images-container');
+    if (!container) return '100%';
+
+    const w_c = container.clientWidth / 3; // Column width (divide by 3 for the three columns)
+    const h_c = container.clientHeight; // Column height
+
+    console.log(`Column dimensions: ${w_c}x${h_c}`);
+
+    const image = this.imageRefs[imageIndex].current;
+    if (!image) {
+        console.log('Image not found, returning 100%');
+        return '100%';
+    }
+
+    const true_w_i = image.naturalWidth;
+    let w_i = w_c * scale;
+
+    // Calculate the number of true pixels in the visible area
+    const visibleWidth = Math.min(w_i, w_c);
+    
+    const zoomScale = (visibleWidth * scale) / true_w_i;
+
+    // Convert zoom scale to percentage
+    const percentage = (zoomScale * 100).toFixed(2);
+
+    console.log(`Zoom scale: ${zoomScale}`);
+    console.log(`Percentage: ${percentage}%`);
+
+    return `${percentage}%`;
+  }
+
 
   getMousePositionOnImage = (event, imageIndex) => {
     const { scale, position } = this.state;
@@ -390,146 +461,109 @@ class ImageSyncComponent extends Component {
   // VISUAL INTERFACE ///////////
   //////////////////////////////
 
+  // renderImage = (src, index) => {
+  //   const { scale, position } = this.state;
+  //   const transform = `scale(${scale}) translate(${position[0]}px, ${position[1]}px)`;
+
+  //   return (
+  //     <div 
+  //       style={{ 
+  //         width: '100%', 
+  //         paddingBottom: '50%', 
+  //         position: 'relative', 
+  //         overflow: 'hidden',
+  //         minHeight: '100vh' 
+  //       }}
+  //       onDoubleClick={() => this.handleImageDoubleClick(index)}
+  //     >
+  //       <img
+  //         alt={`synced image ${index}`}
+  //         ref={this.imageRefs[index]}
+  //         src={src}
+  //         className={`imagesync-image synced-image-${index}`}
+  //         style={{
+  //           transform: transform,
+  //         }}
+  //       />
+  //     </div>
+  //   );
+  // }
+
   renderImage = (src, index) => {
     const { scale, position } = this.state;
     const transform = `scale(${scale}) translate(${position[0]}px, ${position[1]}px)`;
 
     return (
-      <div 
-        style={{ width: '100%', paddingBottom: '50%', position: 'relative', overflow: 'hidden' }}
-        onDoubleClick={() => this.handleImageDoubleClick(index)}
-      >
         <img
           alt={`synced image ${index}`}
+          ref={this.imageRefs[index]}
           src={src}
-          className={`synced-image synced-image-${index}`}
+          className={`imagesync-image synced-image-${index}`}
           style={{
-            position: 'relative',
-            top: '0%',
-            left: '0%',
-            maxWidth: '100%',
-            maxHeight: '100%',
-            objectFit: 'contain',
             transform: transform,
-            transformOrigin: 'center center',
           }}
         />
-      </div>
     );
-  }
-
-  renderChoices() {
-    // This method assumes the choices HTML is available in the DOM
-    // You might need to adjust this based on how the choices are actually rendered
-    const choicesContainer = document.querySelector('.lsf-choices');
-    if (!choicesContainer) return null;
-
-    const choices = Array.from(choicesContainer.children).map(choice => choice.querySelector('.lsf-choice'));
-    return choices;
   }
 
   render() {
     const { item } = this.props;
-
-    const { scale, minZoom, maxZoom, choices } = this.state;
-
-    const sliderStyle = {
-      width: '200px',
-      margin: '0 10px',
-      zIndex: 9
-    };
-
-    const buttonStyle = {
-      padding: '8px 16px',
-      margin: '0 5px',
-      backgroundColor: '#f0f0f0',
-      border: '1px solid #ccc',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      fontSize: '16px',
-      transition: 'background-color 0.3s',
-    };
-
-    const buttonHoverStyle = {
-      ...buttonStyle,
-      backgroundColor: '#e0e0e0',
-    };
+    const { scale, minZoom, maxZoom, choices, controlsVisible } = this.state;
 
     return (
       <Block 
         name="imagesync" 
-        style={{ 
-          width: '100%', 
-          height: '100%', 
-          display: 'flex', 
-          flexDirection: 'column',
-          backgroundColor: '#f8f8f8',
-        }}
         tabIndex={0}
         ref={this.containerRef}
-        // onWheel={this.handleWheel}
-        // onMouseDown={this.handleMouseDown}
+        onMouseMove={this.handleMouseMove}
       >
-        <div style={{ 
-          padding: '15px', 
-          display: 'flex', 
-          justifyContent: 'center',
-          alignItems: 'center',
-          borderBottom: '1px solid #e0e0e0',
-        }}>
-          <span>Zoom: </span>
-          <input 
-            type="range" 
-            min={minZoom} 
-            max={maxZoom} 
-            step="0.1"
-            value={scale}
-            onChange={this.handleZoomChange}
-            style={sliderStyle}
-          />
-          <span>{scale.toFixed(1)}x</span>
-          <button onClick={this.handleReset} style={buttonStyle}>Reset</button>
-        </div>
-        <div style={{ 
-          display: 'flex', 
-          flexGrow: 1, 
-          gap: '0', 
-          padding: '0', 
-          margin: '0',
-          borderTop: '1px solid #e0e0e0',
-        }}>
+        <div className="imagesync-images-container">
           {['Reference Image:', 'Enhanced 1:', 'Enhanced 2:'].map((title, index) => (
             <div 
               key={index}
               data-image-index={index} 
               onWheel={this.handleWheel}
               onMouseDown={this.handleMouseDown}
-              style={{ 
-                flex: 1, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                width: '100%', 
-                padding: '15px', 
-                margin: '0', 
-                height: '100%',
-                borderRight: index < 2 ? '1px solid #e0e0e0' : 'none',
-                borderLeft: index > 0 ? '1px solid #e0e0e0' : 'none',
-                backgroundColor: choices[index] ? 'rgba(0, 255, 0, 0.1)' : 'transparent', // Green background if selected
-                transition: 'background-color 0.3s ease', // Smooth transition for background color change
+              className="imagesync-image-column"
+              data-selected={choices[index]}
+              style={{
+                backgroundColor: choices[index] ? 'rgba(243, 22, 22, 0.4)' : 'transparent',
               }}
             >
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#333' }}>{title}</h3>
-              <div style={{ 
-                flex: 1, 
-                border: '1px solid #e0e0e0', 
-                borderRadius: '4px', 
-                overflow: 'hidden',
-                backgroundColor: '#fff',
-              }}>
+              <h3 className="imagesync-title">
+                  {title} 
+                  <span className="imagesync-frame-percentage">
+                      ({this.calculateFramePercentage(scale, index)})
+                  </span>
+              </h3>
+              <div 
+              className="imagesync-image-wrapper"
+              onDoubleClick={() => this.handleImageDoubleClick(index)}
+              >
                 {this.renderImage(this.getImageSource(`image${index}`), index)}
               </div>
             </div>
           ))}
+        </div>
+        <div 
+          className={`imagesync-controls-wrapper ${controlsVisible ? '' : 'hidden'}`}
+          onMouseEnter={this.showControls}
+          onMouseLeave={this.hideControls}
+        >
+          <div className="imagesync-controls">
+            <span>Zoom: </span>
+            <input 
+              type="range" 
+              min={minZoom} 
+              max={maxZoom} 
+              step="0.1"
+              value={scale}
+              onChange={this.handleZoomChange}
+              className="imagesync-slider"
+            />
+            <span>{scale.toFixed(1)}x</span>
+            <button onClick={this.handleReset} className="imagesync-button">Reset</button>
+          </div>
         </div>
       </Block>
     );
