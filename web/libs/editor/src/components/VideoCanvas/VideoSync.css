@@ -187,72 +187,36 @@
     text-align: center;
     color: #333;
   }
-  
-  .play {
-    height: 25px;
-    width: 25px;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    color: #333;
-    margin-right: 10px;
-  }
-  
-  .play:before,
-  .play:after {
-    content: '';
-    position: absolute;
-    transition: 0.3s;
+
+  .play-pause-button {
+    width: 40px;
+    height: 40px;
+    border: none;
     background: transparent;
-    height: 100%;
-    width: 51%;
-    top: 0;
-    will-change: transform;
-    z-index: 1;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s ease;
   }
   
-  .play:before {
-    left: 0;
+  .play-pause-button:hover {
+    transform: scale(1.1);
   }
   
-  .play:after {
-    right: 0;
+  .play-pause-button:active {
+    transform: scale(0.95);
   }
   
-  .play.paused:before {
-    transform: translateX(-25%);
+  .play-pause-button svg {
+    width: 24px;
+    height: 24px;
+    fill: #e62117; /* You can change this color as needed */
   }
   
-  .play.paused:after {
-    transform: translateX(25%);
-  }
-  
-  .pause:before,
-  .pause:after {
-    content: '';
-    position: absolute;
-    height: 100%;
-    width: 150%;
-    background: #e62117;
-    outline: 1px solid transparent;
-    transition: 0.3s;
-  }
-  
-  .pause:before {
-    top: -100%;
-    transform-origin: 0% 100%;
-    transform: rotate(26.5deg);
-  }
-  
-  .pause:after {
-    transform-origin: 0% 0%;
-    transform: rotate(-26.5deg);
-    top: 100%;
-  }
-  
-  .play.paused .pause:before,
-  .play.paused .pause:after {
-    transform: rotate(0);
+  .play-pause-button.playing svg {
+    fill: #4CAF50; /* Different color for playing state */
   }
   
   button {

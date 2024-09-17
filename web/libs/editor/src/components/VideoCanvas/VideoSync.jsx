@@ -752,10 +752,23 @@ const VideoControls = observer(({
         );
       });
 
-const PlayPauseButton = ({ isPlaying, onClick }) => (
-<div className={`play ${isPlaying ? '' : 'paused'}`} onClick={onClick}>
-    <div className="pause"></div>
-</div>
+
+const PlayPauseButton = ({ isPlaying, onClick }) => {
+return (
+    <button 
+    className={`play-pause-button ${isPlaying ? 'playing' : 'paused'}`} 
+    onClick={onClick}
+    aria-label={isPlaying ? 'Pause' : 'Play'}
+    >
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        {isPlaying ? (
+        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+        ) : (
+        <path d="M8 5v14l11-7z" />
+        )}
+    </svg>
+    </button>
 );
+};
 
 export default observer(VideoSyncComponent);
