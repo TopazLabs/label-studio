@@ -17,7 +17,7 @@ class VideoSyncComponent extends Component {
             scale: 1,
             position: [0, 0],
             minZoom: 0.5,
-            maxZoom: 15,
+            maxZoom: 20,
             videosFitted: false,
 
             // Component State
@@ -32,6 +32,7 @@ class VideoSyncComponent extends Component {
             duration: 0,
             currentTime: 0,
             isPlaying: false,
+            framerate: 30,
         };
         this.containerRef = React.createRef();
         this.timelineRef = React.createRef();
@@ -89,6 +90,11 @@ class VideoSyncComponent extends Component {
 
     handleResize = () => {
         this.fitVideosToColumns();
+    }
+
+    handleFramerateChange = (e) => {
+        const framerate = Math.max(1, Math.min(240, parseInt(e.target.value) || 1));
+        this.setState({ framerate: framerate });
     }
 
     handleKeyDown(e) {
@@ -315,6 +321,7 @@ class VideoSyncComponent extends Component {
                 ref.current.currentTime = 0;
               }
             });
+            this.syncVideos();
             // If it was playing, start playing again
             if (this.state.isPlaying) {
               this.videoRefs.forEach(ref => {
@@ -350,6 +357,11 @@ class VideoSyncComponent extends Component {
             });
             return { isPlaying: newIsPlaying };
         });
+    
+        // Add this line to sync videos when pausing
+        if (!this.state.isPlaying) {
+            this.syncVideos();
+        }
     }
 
     constrainPosition(x, y, scale) {
@@ -493,6 +505,41 @@ class VideoSyncComponent extends Component {
         document.dispatchEvent(event);
     }
 
+    stepForward = () => {
+        const { framerate } = this.state;
+        this.stepVideo(1 / framerate);
+      }
+    
+    stepBackward = () => {
+        const { framerate } = this.state;
+        this.stepVideo(-1 / framerate);
+    }
+    
+    stepVideo = (time) => {
+        this.videoRefs.forEach(ref => {
+            if (ref.current) {
+            ref.current.currentTime += time;
+            }
+        });
+        this.syncVideos();
+    }
+
+    syncVideos = () => {
+        const mainVideo = this.videoRefs[0].current;
+        if (mainVideo) {
+            const targetTime = mainVideo.currentTime;
+            this.videoRefs.slice(1).forEach(ref => {
+                if (ref.current) {
+                    ref.current.currentTime = targetTime;
+                }
+            });
+        }
+        this.setState(prevState => {
+            const newIsPlaying = prevState.isPlaying;
+            return { isPlaying: newIsPlaying };
+        });
+    }
+
     getVideoSource = (videoName) => {
         const { item, store } = this.props;
         return parseValue(item[videoName], store.task.dataObj);
@@ -526,6 +573,7 @@ class VideoSyncComponent extends Component {
             duration,
             position,
             controlsVisible,
+            framerate
           } = this.state;
           const transform = `translate(${position[0]}px, ${position[1]}px) scale(${scale})`;
         
@@ -592,18 +640,22 @@ class VideoSyncComponent extends Component {
                 onMouseEnter={this.showControls}
                 onMouseLeave={this.hideControls}
               >
-                <VideoControls
-                  duration={duration}
-                  currentTime={currentTime}
-                  isPlaying={isPlaying}
-                  onMove={this.handleTimelineMove}
-                  videoRef={this.videoRefs[0]}
-                  scale={scale}
-                  minZoom={minZoom}
-                  maxZoom={maxZoom}
-                  onZoomChange={this.handleZoomChange}
-                  onPlayPause={this.handlePlayPause}
-                  onReset={this.handleReset}
+               <VideoControls
+                duration={duration}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
+                onMove={this.handleTimelineMove}
+                videoRef={this.videoRefs[0]}
+                scale={scale}
+                minZoom={minZoom}
+                maxZoom={maxZoom}
+                onZoomChange={this.handleZoomChange}
+                onPlayPause={this.handlePlayPause}
+                onReset={this.handleReset}
+                onStepForward={this.stepForward}
+                onStepBackward={this.stepBackward}
+                framerate={framerate}
+                onFramerateChange={this.handleFramerateChange}
                 />
               </div>
             </Block>
@@ -611,19 +663,23 @@ class VideoSyncComponent extends Component {
     }
 }
   
-const VideoControls = observer(({ 
-        duration, 
-        currentTime, 
-        isPlaying, 
-        onMove, 
-        videoRef,
-        scale,
-        minZoom,
-        maxZoom,
-        onZoomChange,
-        onPlayPause,
-        onReset
-      }) => {
+const VideoControls = ({
+    duration,
+    currentTime,
+    isPlaying,
+    onMove,
+    videoRef,
+    scale,
+    minZoom,
+    maxZoom,
+    onZoomChange,
+    onPlayPause,
+    onReset,
+    onStepForward,
+    onStepBackward,
+    framerate,
+    onFramerateChange
+  }) => {
         const timelineRef = useRef(null);
         const [thumbnails, setThumbnails] = useState([]);
         const [isDragging, setIsDragging] = useState(false);
@@ -732,25 +788,37 @@ const VideoControls = observer(({
               <div className="Timeline-time">{formatTime(currentTime)} / {formatTime(duration)}</div>
             </div>
             <div className="VideoControls-buttons">
-              <PlayPauseButton 
-                isPlaying={isPlaying} 
-                onClick={onPlayPause} />
-              <button onClick={onReset}>Reset</button>
-              <span>Zoom: </span>
-              <input
-                type="range"
-                min={minZoom}
-                max={maxZoom}
-                step="0.1"
-                value={scale}
-                onChange={onZoomChange}
-                className="VideoControls-slider"
-              />
-              <span className="VideoControls-value">{scale.toFixed(1)}x</span>
+                <button onClick={onStepBackward}>Step Backward</button>
+                <PlayPauseButton 
+                    isPlaying={isPlaying} 
+                    onClick={onPlayPause}
+                />
+                <button onClick={onStepForward}>Step Forward</button>
+                <input
+                    type="number"
+                    min="1"
+                    max="240"
+                    value={framerate}
+                    onChange={onFramerateChange}
+                    className="VideoControls-framerate"
+                />
+                <span>fps</span>
+                <button onClick={onReset}>Reset</button>
+                <span>Zoom: </span>
+                <input
+                    type="range"
+                    min={minZoom}
+                    max={maxZoom}
+                    step="0.1"
+                    value={scale}
+                    onChange={onZoomChange}
+                    className="VideoControls-slider"
+                />
+                <span className="VideoControls-value">{scale.toFixed(1)}x</span>
             </div>
           </div>
         );
-      });
+      }
 
 
 const PlayPauseButton = ({ isPlaying, onClick }) => {

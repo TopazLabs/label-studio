@@ -17,7 +17,7 @@ class ImageSyncComponent extends Component {
       scale: 1,
       position: [0, 0],
       minZoom: 0.5,
-      maxZoom: 10,
+      maxZoom: 20,
       imagesFitted: false,
 
       // Component State

@@ -188,6 +188,27 @@
     color: #333;
   }
 
+  .VideoControls-framerate {
+    width: 50px;
+    margin: 0 5px;
+    padding: 2px 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+  }
+  
+  .VideoControls-buttons button {
+    margin: 0 5px;
+    padding: 5px 10px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .VideoControls-buttons button:hover {
+    background-color: #e0e0e0;
+  }
+
   .play-pause-button {
     width: 40px;
     height: 40px;
@@ -218,7 +239,7 @@
   .play-pause-button.playing svg {
     fill: #4CAF50; /* Different color for playing state */
   }
-  
+
   button {
     margin-right: 10px;
     padding: 5px 10px;
