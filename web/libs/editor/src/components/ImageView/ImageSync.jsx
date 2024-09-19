@@ -371,7 +371,7 @@ class ImageSyncComponent extends Component {
     return { width: 1, height: 1 };
   }
 
-  calculateFramePercentage(scale, imageIndex) {
+  calculateFrameData(scale, imageIndex) {
     const container = document.querySelector('.imagesync-images-container');
     if (!container) return '100%';
 
@@ -387,6 +387,7 @@ class ImageSyncComponent extends Component {
     }
 
     const true_w_i = image.naturalWidth;
+    const true_h_i = image.naturalHeight;
     let w_i = w_c * scale;
 
     // Calculate the number of true pixels in the visible area
@@ -400,7 +401,8 @@ class ImageSyncComponent extends Component {
     console.log(`Zoom scale: ${zoomScale}`);
     console.log(`Percentage: ${percentage}%`);
 
-    return `${percentage}%`;
+
+    return `Scale: ${percentage}%, Img Dims: ${true_w_i}x${true_h_i}, Col Dims: ${w_c}x${h_c}`;
   }
 
 
@@ -533,7 +535,7 @@ class ImageSyncComponent extends Component {
               <h3 className="imagesync-title">
                   {title} 
                   <span className="imagesync-frame-percentage">
-                      ({this.calculateFramePercentage(scale, index)})
+                      ({this.calculateFrameData(scale, index)})
                   </span>
               </h3>
               <div 

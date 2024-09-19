@@ -133,6 +133,14 @@ class VideoSyncComponent extends Component {
                     e.preventDefault();
                     this.handleKeyPan(-PAN_PXLS / this.state.scale, 0);
                     break;
+                case ',':
+                    e.preventDefault();
+                    this.stepBackward();
+                    break;
+                case '.':
+                    e.preventDefault();
+                    this.stepForward();
+                    break;
                 default:
                     break;
             }
@@ -491,7 +499,7 @@ class VideoSyncComponent extends Component {
         const percentage = (overallScale * 100).toFixed(2);
         console.log(`Final percentage: ${percentage}%`);
 
-        return `${percentage}%`;
+        return `Scale: ${percentage}%, Video Dims: ${videoWidth}x${videoHeight}`;
     }
 
     simulateKeyPress = (key) => {
