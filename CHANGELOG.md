@@ -5,11 +5,11 @@
 ### Added
 - New visualization feature for project data
   - Added VisualizationPage component
-  - Implemented categorical discrete visualization
+  - Implemented categorical visualization templates for attribute columns and data columns
   - Added SQL query execution for custom visualizations
 - New 'Substring' filter option for string fields
 - Added 'id_str' field to Task model for string representation of task ID
-- Integrated matplotlib and pandasql libraries for data visualization
+- Integrated plotly for data visualization
 
 ### Changed
 - Increased default line height for improved accessibility
@@ -21,6 +21,7 @@
 ### Fixed
 - Improved error handling in API calls
 - Fixed issues with image syncing in ImageView component
+- focus issues
 
 ### Development
 - Added new dependencies: matplotlib, dash, django-plotly-dash, pandasql
