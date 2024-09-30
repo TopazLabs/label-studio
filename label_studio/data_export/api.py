@@ -827,7 +827,7 @@ class VisualizationAPI(APIView):
     def post(self, request, *args, **kwargs):
         try:
             project_id = self.kwargs.get('pk')
-            include_all_tasks = request.GET.get('include_all_tasks', False)
+            include_all_tasks = request.GET.get('include_all_tasks', False) == "true"
             ignore_keys = request.GET.get('ignore_keys', "").split(',')
             only_finished = not include_all_tasks
 

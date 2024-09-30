@@ -462,30 +462,13 @@ const VisualizationDashboard = () => {
 export const VisualizationPage = () => {
   const { id } = useParams();
 
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-        console.log("Escape key pressed");
-        window.location.href = `/projects/${id}/`;
-      }
-    };
-
-    // Add event listener
-    document.addEventListener('keydown', handleKeyDown, true);
-
-    // Cleanup function to remove event listener
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [id]);
 
   return (
     <Modal
       title="Project Visualization"
       className="full-screen-modal"
       closeOnClickOutside={false}
+      onHide={() => window.location.href = `/projects/${id}/`}
       visible={true}
       fullscreen={true}
     >
