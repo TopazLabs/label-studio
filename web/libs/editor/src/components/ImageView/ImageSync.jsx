@@ -400,33 +400,45 @@ class ImageSyncComponent extends Component {
 
   calculateFrameData(scale, imageIndex) {
     const container = document.querySelector('.imagesync-image-column');
-    if (!container) return '100%';
-
+    if (!container) {
+      console.debug('Container not found, returning 100%');
+      return '100%';
+    }
+  
     const w_c = container.clientWidth;
     const h_c = container.clientHeight;
-
-    console.log(`Column dimensions: ${w_c}x${h_c}`);
-
-    const image = this.imageRefs[imageIndex]?.current;
+  
+    console.debug(`Column dimensions: ${w_c}x${h_c}`);
+  
+    const image = document.querySelector(`.synced-image-${imageIndex}`);
     if (!image) {
-        console.log('Image not found, returning 100%');
-        return '100%';
+      console.debug('Image not found, returning 100%');
+      return '100%';
     }
-
+  
+    console.debug('Image found:', image);
+  
     const true_w_i = image.naturalWidth;
     const true_h_i = image.naturalHeight;
-    let w_i = w_c * scale;
-
-    const visibleWidth = Math.min(w_i, w_c);
     
-    const zoomScale = (visibleWidth * scale) / true_w_i;
-
-    const percentage = (zoomScale * 100).toFixed(2);
-
-    console.log(`Zoom scale: ${zoomScale}`);
-    console.log(`Percentage: ${percentage}%`);
-
-    return `Scale: ${percentage}%, Img Dims: ${true_w_i}x${true_h_i}, Col Dims: ${w_c}x${h_c}`;
+    // Calculate the scaled dimensions of the image
+    const scaled_w_i = true_w_i * scale;
+    const scaled_h_i = true_h_i * scale;
+  
+    // Calculate the visible dimensions (constrained by the container)
+    const visible_w = Math.min(scaled_w_i, w_c);
+    const visible_h = Math.min(scaled_h_i, h_c);
+  
+    // Calculate the number of original image pixels being displayed
+    const displayed_w = Math.round(visible_w / scale);
+    const displayed_h = Math.round(visible_h / scale);
+  
+    const percentage = ((visible_w * visible_h) / (true_w_i * true_h_i) * 100).toFixed(2);
+  
+    console.debug(`Displayed dimensions: ${displayed_w}x${displayed_h}`);
+    console.debug(`Percentage of image visible: ${percentage}%`);
+  
+    return `${(scale * 100).toFixed(2)}%, ${displayed_w}x${displayed_h}px of ${true_w_i}x${true_h_i}px`;
   }
 
 
