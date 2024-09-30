@@ -10,6 +10,7 @@ app_name = 'data_export'
 _api_urlpatterns = [
     # export api
     path('<int:pk>/export', api.ExportAPI.as_view(), name='project-export'),
+    path('<int:pk>/visualize/', api.VisualizationAPI.as_view(), name='project-visualize'),
     path('<int:pk>/export/formats', api.ExportFormatsListAPI.as_view(), name='project-export-formats'),
     # Previously exported results
     path('<int:pk>/export/files', api.ProjectExportFiles.as_view(), name='project-export-files'),

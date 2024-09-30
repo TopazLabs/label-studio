@@ -20,4 +20,18 @@ export function useAPI(): {
       body?: FormData | Record<string, any>;
     },
   ) => Promise<WrappedResponse<T>>;
+  callApiWithQuery: (
+    api: string,
+    options?: {
+      params?: Record<string, unknown>;
+      query?: Record<string, unknown>;
+    },
+  ) => Promise<Blob>;
+  downloadFile: (
+    api: string,
+    options?: {
+      params?: Record<string, unknown>;
+      query?: Record<string, unknown>;
+    },
+  ) => Promise<Blob>;
 };

@@ -55,6 +55,15 @@ class Task(TaskMixin, models.Model):
         verbose_name='ID',
         db_index=True,
     )
+    
+    id_str = models.CharField(
+        _('ID String'),
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text='Task ID as string',
+    )
+        
     data = JSONField(
         'data',
         null=False,
@@ -511,7 +520,9 @@ class Task(TaskMixin, models.Model):
                 self.inner_id = None if max_inner_id is None else (max_inner_id + 1)
                 if update_fields is not None:
                     update_fields = {'inner_id'}.union(update_fields)
-
+        if not self.id_str:
+            self.id_str = str(self.id)
+            
         super().save(*args, update_fields=update_fields, **kwargs)
 
     @staticmethod

@@ -92,10 +92,67 @@ export const ApiProvider = forwardRef(({ children }, ref) => {
     return result;
   }, []);
 
+  const callApiWithQuery = useCallback(async (method, { params = {}, errorFilter, body, ...rest } = {}) => {
+    if (apiLocked) return;
+
+    setError(null);
+
+    try {
+
+      const response = await API[method](params, { ...rest, body: JSON.stringify(body) });
+
+      if (response.status === 401) {
+        apiLocked = true;
+        location.href = absoluteURL("/");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      return blob;
+    } catch (error) {
+      setError(error);
+      await handleError(error, contextValue.showModal);
+      return null;
+    }
+  }, []);
+
+  const downloadFile = useCallback(async (method, { params = {}, ...rest } = {}) => {
+    if (apiLocked) return;
+
+    setError(null);
+
+    try {
+
+      const response = await API[method](params, rest);
+
+      if (response.status === 401) {
+        apiLocked = true;
+        location.href = absoluteURL("/");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      return blob;
+    } catch (error) {
+      setError(error);
+      await handleError(error, contextValue.showModal);
+      return null;
+    }
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       api: API,
       callApi,
+      downloadFile,
       handleError,
       error,
       showModal: true,

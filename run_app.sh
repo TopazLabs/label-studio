@@ -52,6 +52,9 @@ pip install --upgrade pip setuptools poetry
 # Install Python dependencies
 poetry install
 
+# Added Pip packages
+pip install pandas matplotlib dash django-plotly-dash pandasql
+
 # Step 4: Set up and run Django application
 echo "Setting up and running the Django application..."
 cd $PROJECT_DIR
@@ -62,4 +65,4 @@ python3 label_studio/manage.py collectstatic --no-input
 
 # Start the application
 echo "Starting Label Studio..."
-python3 label_studio/manage.py runserver 0.0.0.0:8080
+TOPAZ_DEBUG_MODE=true python3 label_studio/manage.py runserver 0.0.0.0:8080

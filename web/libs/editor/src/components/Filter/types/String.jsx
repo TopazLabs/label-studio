@@ -47,5 +47,11 @@ export const StringFilter = [
     valueType: "single",
     input: BaseInput,
   },
+  {
+    key: "substring",
+    label: "Substring",
+    valueType: "single",
+    input: BaseInput,
+  },
   ...Common,
 ];

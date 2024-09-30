@@ -19,4 +19,5 @@ urlpatterns = [
     path('projects/<int:pk>/data/', views.task_page, name='project-data'),
     path('projects/<int:pk>/data/import', views.task_page, name='project-import'),
     path('projects/<int:pk>/data/export', views.task_page, name='project-export'),
+    path('projects/<int:pk>/data/visualize', views.task_page, name='project-visualize'),
 ]

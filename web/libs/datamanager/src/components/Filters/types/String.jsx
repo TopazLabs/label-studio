@@ -39,4 +39,10 @@ export const StringFilter = [
     valueType: "single",
     input: (props) => <BaseInput {...props} />,
   },
+  {
+    key: "substring",
+    label: "Substring",
+    valueType: "single",
+    input: (props) => <BaseInput {...props} />,
+  },
 ];

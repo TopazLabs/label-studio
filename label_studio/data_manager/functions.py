@@ -87,6 +87,15 @@ def get_all_columns(project, *_):
             'target': 'tasks',
             'visibility_defaults': {'explore': True, 'labeling': False},
             'project_defined': False,
+        },
+         {
+            'id': 'id_str',
+            'title': 'ID String',
+            'type': 'String',
+            'help': 'Task ID as string',
+            'target': 'tasks',
+            'visibility_defaults': {'explore': True, 'labeling': False},
+            'project_defined': False,
         }
     ]
 

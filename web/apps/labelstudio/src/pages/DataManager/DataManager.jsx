@@ -13,6 +13,7 @@ import { Block, Elem } from "../../utils/bem";
 import { isDefined } from "../../utils/helpers";
 import { ImportModal } from "../CreateProject/Import/ImportModal";
 import { ExportPage } from "../ExportPage/ExportPage";
+import { VisualizationPage } from "../VisualizationPage/VisualizationPage";
 import { APIConfig } from "./api-config";
 import { ToastContext } from "../../components/Toast/Toast";
 import { FF_OPTIC_2, isFF } from "../../utils/feature-flags";
@@ -41,6 +42,7 @@ const initializeDataManager = async (root, props, params) => {
     interfaces: {
       import: true,
       export: true,
+      visualize: true,
       backButton: false,
       labelingHeader: false,
       autoAnnotation: params.autoAnnotation,
@@ -108,6 +110,10 @@ export const DataManagerPage = ({ ...props }) => {
 
     dataManager.on("exportClicked", () => {
       history.push(buildLink("/data/export", { id: params.id }));
+    });
+
+    dataManager.on("visualizeClicked", () => {
+      history.push(buildLink("/data/visualize", { id: params.id }));
     });
 
     dataManager.on("error", (response) => {
@@ -212,6 +218,7 @@ DataManagerPage.path = "/data";
 DataManagerPage.pages = {
   ExportPage,
   ImportModal,
+  VisualizationPage,
 };
 DataManagerPage.context = ({ dmRef }) => {
   const location = useFixedLocation();

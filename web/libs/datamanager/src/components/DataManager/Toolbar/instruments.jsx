@@ -6,7 +6,7 @@ import { FieldsButton } from "../../Common/FieldsButton";
 import { FiltersPane } from "../../Common/FiltersPane";
 import { Icon } from "../../Common/Icon/Icon";
 import { Interface } from "../../Common/Interface";
-import { ExportButton, ImportButton } from "../../Common/SDKButtons";
+import { ExportButton, ImportButton, VisualizeButton } from "../../Common/SDKButtons";
 import { Tooltip } from "../../Common/Tooltip/Tooltip";
 import { ActionsButton } from "./ActionsButton";
 import { GridWidthButton } from "./GridWidthButton";
@@ -128,6 +128,13 @@ export const instruments = {
     return (
       <Interface name="export">
         <ExportButton size={size}>Export</ExportButton>
+      </Interface>
+    );
+  },
+  "visualize-button": ({ size }) => {
+    return (
+      <Interface name="visualize">
+        <VisualizeButton size={size}>Visualize</VisualizeButton>
       </Interface>
     );
   },

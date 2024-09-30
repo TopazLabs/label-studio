@@ -5,7 +5,7 @@ import os
 import traceback as tb
 from datetime import datetime
 from urllib.parse import urlparse
-
+import json
 from core.feature_flags import flag_set
 from core.permissions import all_permissions
 from core.redis import start_job_async_or_sync
@@ -26,6 +26,19 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from tasks.models import Task
 
+# Data Visualization
+from io import BytesIO
+import pandas as pd
+import pandasql as psql
+import matplotlib
+matplotlib.use('Agg')  # Use the 'Agg' backend, which doesn't require a GUI
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+import math
+
+
+
 from .models import ConvertedFormat, DataExport, Export
 from .serializers import (
     ExportConvertSerializer,
@@ -33,6 +46,7 @@ from .serializers import (
     ExportDataSerializer,
     ExportParamSerializer,
     ExportSerializer,
+    VisualizationParamSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -210,7 +224,6 @@ class ExportAPI(generics.RetrieveAPIView):
         r = FileResponse(export_file, as_attachment=True, content_type=content_type, filename=filename)
         r['filename'] = filename
         return r
-
 
 @method_decorator(
     name='get',
@@ -660,3 +673,229 @@ class ExportConvertAPI(generics.RetrieveAPIView):
             on_failure=set_convert_background_failure,
         )
         return Response({'export_type': export_type, 'converted_format': converted_format.id})
+
+def execute_sql_query(df: pd.DataFrame, query: str) -> pd.DataFrame:
+    """
+    Execute an SQL query on a pandas DataFrame and return the result as a DataFrame.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to query.
+        query (str): The SQL query to execute.
+
+    Returns:
+        pd.DataFrame: The result of the query.
+    """
+    df = pd.DataFrame(df)
+    for column in df.columns:
+        if df[column].apply(type).nunique() > 1 or df[column].dtype == 'object':
+            # Check if the column contains unsupported types (e.g., lists, dicts)
+            df[column] =  df[column].apply(lambda x: x if not isinstance(x, (list, dict)) else json.dumps(x))
+    
+    # Create a temporary CSV file
+    if os.environ.get("TOPAZ_DEBUG_MODE") == "true":
+        temp_csv_path = '/tmp/df_query_data.csv'
+        df.to_csv(temp_csv_path, index=False)
+    result_df = psql.sqldf(query, locals())
+    
+    # Post-processing step to rename columns to X, Y, and Z if not present
+    if 'X' not in result_df.columns or 'Y' not in result_df.columns:
+        num_columns = len(result_df.columns)
+        if num_columns >= 1:
+            result_df = result_df.rename(columns={result_df.columns[0]: 'X'})
+        if num_columns >= 2:
+            result_df = result_df.rename(columns={result_df.columns[1]: 'Y'})
+        if num_columns >= 3:
+            result_df = result_df.rename(columns={result_df.columns[2]: 'Z'})
+            
+    return result_df
+
+def get_project_dataframe(project_id, only_finished=True, ignore_keys=None):
+    project = Project.objects.get(id=project_id)
+    query = Task.objects.filter(project=project)
+    if only_finished:
+        query = query.filter(annotations__isnull=False).distinct()
+
+    tasks = serialize_tasks(query)
+    df = pd.DataFrame(tasks)
+
+    # Save initial DataFrame to file for debugging
+    
+    if os.environ.get("TOPAZ_DEBUG_MODE") == "true":
+        df.to_csv('/tmp/initial_dataframe.csv', index=False)
+
+    if 'data' in df.columns:
+        data_df = pd.json_normalize(df['data'].apply(lambda x: {k: v for k, v in x.items() if k != 'id'}))
+        df = pd.concat([df.drop(columns=['data']), data_df], axis=1)
+
+        # Save DataFrame after normalizing 'data' for debugging
+        
+        if os.environ.get("TOPAZ_DEBUG_MODE") == "true":
+            df.to_csv('/tmp/after_normalizing_data.csv', index=False)
+
+    if 'annotations' in df.columns:
+        def extract_annotation(annotation):
+            if 'value' in annotation and 'choices' in annotation['value']:
+                return annotation['value']['choices'][0]
+            return None
+
+        def extract_annotation_columns(annotations_column_data):
+            if annotations_column_data and isinstance(annotations_column_data, list) and len(annotations_column_data) > 0:
+                first_annotation = annotations_column_data[0]
+                if isinstance(first_annotation, list):
+                    keys = [annotation["from_name"] for annotation in first_annotation if "from_name" in annotation]
+                    values = [extract_annotation(annotation) for annotation in first_annotation]
+                    return dict(zip(keys, values))
+            return {}
+
+        annotation_data = df['annotations'].apply(extract_annotation_columns)
+        for key in set().union(*annotation_data.apply(lambda x: x.keys())):
+            df[key] = annotation_data.apply(lambda x: x.get(key))
+        
+        df = df.drop(columns=['annotations'])
+
+        # Save DataFrame after extracting annotations for debugging
+        
+        if os.environ.get("TOPAZ_DEBUG_MODE") == "true":
+            df.to_csv('/tmp/after_extracting_annotations.csv', index=False)
+
+    # Handle NaN and infinite values
+    df = df.fillna(0)  # Replace NaN with 0 or any other value you find appropriate
+    df = df.replace([float('inf'), float('-inf')], 0)  # Replace infinite values with 0 or any other value
+
+    # Save DataFrame after handling NaN and infinite values for debugging
+    
+    if os.environ.get("TOPAZ_DEBUG_MODE") == "true":
+        df.to_csv('/tmp/after_handling_nan_inf.csv', index=False)
+
+    # Drop columns specified in ignore_keys
+    if ignore_keys:
+        df = df.drop(columns=ignore_keys, errors='ignore')
+
+    # Save DataFrame after dropping ignored keys for debugging
+    if os.environ.get("TOPAZ_DEBUG_MODE") == "true":
+        df.to_csv('/tmp/after_dropping_ignore_keys.csv', index=False)
+
+    return df
+
+def serialize_tasks(queryset):
+    tasks = []
+    for task in queryset:
+        task_data = {
+            'id': task.id,
+            'data': task.data,
+            'annotations': [ann.result for ann in task.annotations.all()],
+            'predictions': [pred.result for pred in task.predictions.all()],
+        }
+        tasks.append(task_data)
+    return tasks
+
+class VisualizationAPI(APIView):
+    permission_required = all_permissions.projects_view
+    
+    def get(self, request, *args, **kwargs):
+        project_id = self.kwargs.get('pk')
+        include_all_tasks = True
+        ignore_keys = []
+
+        df = get_project_dataframe(project_id, only_finished=False, ignore_keys=ignore_keys)
+        
+        num_rows = len(df)
+        threshold = num_rows // 2
+        min_occurrences = int(0.01 * num_rows)  # Ensure at least 1
+        
+        categorical_columns = []
+        
+        for column in [col for col in df.columns if col not in ignore_keys and "model_enh" not in col and "modelName" not in col]:
+            try:
+                unique_values = df[column].nunique()
+                
+                if unique_values < threshold:
+                    value_counts = df[column].value_counts()
+                    
+                    # Check if each value occurs at least min_occurrences times
+                    if all(count >= min_occurrences for count in value_counts):
+                        categorical_columns.append(column)
+            except TypeError:
+                # Skip columns that can't be hashed (e.g., lists)
+                continue
+        response_data = {
+            'categorical_columns': categorical_columns
+        }
+        
+        return Response(response_data)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            project_id = self.kwargs.get('pk')
+            include_all_tasks = request.GET.get('include_all_tasks', False)
+            ignore_keys = request.GET.get('ignore_keys', "").split(',')
+            only_finished = not include_all_tasks
+
+            sql_query = request.data.get('sql_query')
+            if not sql_query:
+                with open('/tmp/debug__json_req.json', 'w') as f:
+                    json.dump(request.data, f, indent=2)
+                return Response({'error': 'No SQL query provided'}, status=400)
+
+            df = get_project_dataframe(project_id, only_finished, ignore_keys)
+
+            # Execute the SQL query
+            result_df = execute_sql_query(df, sql_query)
+
+            # Save the result DataFrame after executing the SQL query for debugging
+            if os.environ.get("TOPAZ_DEBUG_MODE") == "true":
+                result_df.to_csv('/tmp/result_dataframe.csv', index=False)
+
+            merged_df = result_df
+
+            data = {
+                'data': merged_df.to_dict(orient='records'),
+            }
+
+            return Response(data)
+        except Exception as e:
+            import traceback
+            error_info = traceback.format_exc()
+            logging.error(f"Error in VisualizationAPI: {str(e)}\nStack trace:\n{error_info}")
+            return Response({'error': str(e)}, status=500)
+
+def categorical_discrete_visualization(df: pd.DataFrame, column_key: str, category: str = "all"):
+    """
+    Generate a categorical discrete visualization saved as a PDF.
+
+    - If `category` is 'all', a single bar chart is saved to the PDF.
+    - If `category` is specified, a bar chart is generated for each unique value of `category`,
+      each saved as a separate page in the PDF.
+    """
+    if column_key not in df.columns:
+        raise ValueError(f"Column '{column_key}' not found in DataFrame")
+
+    if category != 'all' and category not in df.columns:
+        raise ValueError(f"Category '{category}' not found in DataFrame")
+
+    # Create a BytesIO buffer to save the PDF
+    pdf_buffer = BytesIO()
+
+    with PdfPages(pdf_buffer) as pdf:
+        if category == 'all':
+            counts = df[column_key].value_counts()
+            probabilities = counts / counts.sum()
+            fig, ax = plt.subplots()
+            ax.pie(probabilities.values, labels=probabilities.index, autopct='%1.1f%%')
+            ax.set_title(f"Distribution of {column_key}")
+            pdf.savefig(fig)
+            plt.close(fig)
+        else:
+            unique_categories = df[category].unique()
+            for cat in unique_categories:
+                sub_df = df[df[category] == cat]
+                counts = sub_df[column_key].value_counts()
+                probabilities = counts / counts.sum()  # Convert counts to probabilities
+                fig, ax = plt.subplots()
+                ax.pie(probabilities.values, labels=probabilities.index, autopct='%1.1f%%')
+                ax.set_title(f"Distribution of {column_key} for {category} = {cat}")
+                pdf.savefig(fig)
+                plt.close(fig)
+
+    pdf_buffer.seek(0)
+    return pdf_buffer

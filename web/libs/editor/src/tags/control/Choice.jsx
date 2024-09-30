@@ -4,7 +4,7 @@ import Radio from "antd/lib/radio/index";
 import Checkbox from "antd/lib/checkbox/index";
 import { inject, observer } from "mobx-react";
 import { types } from "mobx-state-tree";
-
+import { parseValue } from "../../utils/data";
 import Hint from "../../components/Hint/Hint";
 import ProcessAttrsMixin from "../../mixins/ProcessAttrs";
 import Registry from "../../core/Registry";
@@ -18,6 +18,11 @@ import "./Choice/Choice.scss";
 import { LsChevron } from "../../assets/icons";
 import { HintTooltip } from "../../components/Taxonomy/Taxonomy";
 import { sanitizeHtml } from "../../utils/html";
+
+function getAttr(props, propertyName) {
+  const { item, store } = props;
+  return parseValue(item[propertyName], store.task.dataObj);
+}
 
 /**
  * The `Choice` tag represents a single choice for annotations. Use with the `Choices` tag or `Taxonomy` tag to provide specific choice options.
@@ -56,6 +61,8 @@ const TagAttrs = types.model({
   color: types.maybeNull(types.string),
   ...(isFF(FF_PROD_309) ? { hint: types.maybeNull(types.string) } : {}),
 });
+
+
 
 const Model = types
   .model({
@@ -106,7 +113,7 @@ const Model = types
       return self.parent?.allownested !== false;
     },
     get _resultValue() {
-      return self.alias ?? self._value;
+      return self.getAliasValue() ?? self._value;
     },
     get resultValue() {
       if (self.nestedResults) {
@@ -155,6 +162,10 @@ const Model = types
         });
       }
     },
+
+    getAliasValue() {
+      return getAttr({store: self.annotation.store, item: self}, "alias");
+    },
   }))
   .actions((self) => {
     if (self.parent?.type === "choices")
@@ -173,7 +184,7 @@ const nameWrapper = (Component, name) => {
   return (props) => <Component {...props} name={name} />;
 };
 
-const HtxNewChoiceView = ({ item, store }) => {
+const HtxNewChoiceView = inject("store")(observer(({ item, store }) => {
   let style = {};
 
   if (item.style) style = Tree.cssConverter(item.style);
@@ -192,6 +203,8 @@ const HtxNewChoiceView = ({ item, store }) => {
   const [collapsed, setCollapsed] = useState(false);
   const toogleCollapsed = useCallback(() => setCollapsed((collapsed) => !collapsed), []);
 
+  const aliasValue = item.getAliasValue();
+
   return (
     <Block
       name="choice"
@@ -208,7 +221,7 @@ const HtxNewChoiceView = ({ item, store }) => {
           onChange={changeHandler}
         >
           <HintTooltip title={item.hint} wrapper="span">
-            {item.html ? <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.html) }} /> : item._value}
+            {item.html ? <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.html) }} /> : (aliasValue || item._value)}
             {showHotkey && <Hint>[{item.hotkey}]</Hint>}
           </HintTooltip>
         </Elem>
@@ -227,7 +240,7 @@ const HtxNewChoiceView = ({ item, store }) => {
       ) : null}
     </Block>
   );
-};
+}));
 
 const HtxChoice = inject("store")(observer(HtxNewChoiceView));
 

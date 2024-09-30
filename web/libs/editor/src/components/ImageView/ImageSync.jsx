@@ -19,12 +19,13 @@ class ImageSyncComponent extends Component {
       minZoom: 0.5,
       maxZoom: 20,
       imagesFitted: false,
+      loadedImages: [],
+
 
       // Component State
       isDragging: false,
       lastMousePosition: [0, 0],
       controlsVisible: false,
-
 
       // UI State:
       choices: [],
@@ -57,7 +58,7 @@ class ImageSyncComponent extends Component {
     document.addEventListener('mouseup', this.handleMouseUp);
     document.addEventListener('mousemove', this.handleMouseMove);
     this.containerRef.current.addEventListener('wheel', this.handleWheel, { passive: false });
-    this.fitImagesToColumns();
+    this.loadImages();
     this.startPolling();
   }
 
@@ -66,7 +67,9 @@ class ImageSyncComponent extends Component {
     window.removeEventListener('resize', this.handleResize);
     document.removeEventListener('mouseup', this.handleMouseUp);
     document.removeEventListener('mousemove', this.handleMouseMove);
-    this.containerRef.current.removeEventListener('wheel', this.handleWheel);
+    if (this.containerRef.current) {
+      this.containerRef.current.removeEventListener('wheel', this.handleWheel);
+    }
     this.stopPolling();
   }
 
@@ -95,7 +98,6 @@ class ImageSyncComponent extends Component {
       clearInterval(this.pollInterval);
     }
   }
-
 
   ///////////////////////////////
   // HANDLER METHODS ///////////
@@ -266,10 +268,10 @@ class ImageSyncComponent extends Component {
       width = image.width;
       height = image.height;
     }
-    
-    const containerRect = this.containerRef.current.getBoundingClientRect();
-    const containerWidth = containerRect.width / 3; // Assuming 3 columns
-    const containerHeight = containerRect.height;
+
+    const container = document.querySelector('.imagesync-image-column');
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
 
     const scaledWidth = width * scale;
     const scaledHeight = height * scale;
@@ -296,9 +298,34 @@ class ImageSyncComponent extends Component {
     });
     document.dispatchEvent(event);
   }
+
+  loadImages() {
+    const { item } = this.props;
+    const imagePaths = ['image0', 'image1', 'image2'];
+    
+    imagePaths.forEach((imageName, index) => {
+      const imagePath = this.getImageSource(imageName);
+      if (imagePath) {
+        const img = new Image();
+        img.onload = () => {
+          this.setState(prevState => {
+            const newLoadedImages = [...prevState.loadedImages, { index, path: imagePath }];
+            // Sort the loaded images by their index
+            newLoadedImages.sort((a, b) => a.index - b.index);
+            return { loadedImages: newLoadedImages };
+          }, () => {
+            if (this.state.loadedImages.length === 1) {
+              this.fitImagesToColumns();
+            }
+          });
+        };
+        img.src = imagePath;
+      }
+    });
+  }
   
   fitImagesToColumns = () => {
-    const containerWidth = this.containerRef.current.clientWidth / 3; // Assuming 3 columns
+    const containerWidth = this.containerRef.current.clientWidth / this.state.loadedImages.length;
     const images = document.querySelectorAll('.synced-image');
     
     images.forEach(img => {
@@ -372,15 +399,15 @@ class ImageSyncComponent extends Component {
   }
 
   calculateFrameData(scale, imageIndex) {
-    const container = document.querySelector('.imagesync-images-container');
+    const container = document.querySelector('.imagesync-image-column');
     if (!container) return '100%';
 
-    const w_c = container.clientWidth / 3; // Column width (divide by 3 for the three columns)
-    const h_c = container.clientHeight; // Column height
+    const w_c = container.clientWidth;
+    const h_c = container.clientHeight;
 
     console.log(`Column dimensions: ${w_c}x${h_c}`);
 
-    const image = this.imageRefs[imageIndex].current;
+    const image = this.imageRefs[imageIndex]?.current;
     if (!image) {
         console.log('Image not found, returning 100%');
         return '100%';
@@ -390,17 +417,14 @@ class ImageSyncComponent extends Component {
     const true_h_i = image.naturalHeight;
     let w_i = w_c * scale;
 
-    // Calculate the number of true pixels in the visible area
     const visibleWidth = Math.min(w_i, w_c);
     
     const zoomScale = (visibleWidth * scale) / true_w_i;
 
-    // Convert zoom scale to percentage
     const percentage = (zoomScale * 100).toFixed(2);
 
     console.log(`Zoom scale: ${zoomScale}`);
     console.log(`Percentage: ${percentage}%`);
-
 
     return `Scale: ${percentage}%, Img Dims: ${true_w_i}x${true_h_i}, Col Dims: ${w_c}x${h_c}`;
   }
@@ -463,34 +487,6 @@ class ImageSyncComponent extends Component {
   // VISUAL INTERFACE ///////////
   //////////////////////////////
 
-  // renderImage = (src, index) => {
-  //   const { scale, position } = this.state;
-  //   const transform = `scale(${scale}) translate(${position[0]}px, ${position[1]}px)`;
-
-  //   return (
-  //     <div 
-  //       style={{ 
-  //         width: '100%', 
-  //         paddingBottom: '50%', 
-  //         position: 'relative', 
-  //         overflow: 'hidden',
-  //         minHeight: '100vh' 
-  //       }}
-  //       onDoubleClick={() => this.handleImageDoubleClick(index)}
-  //     >
-  //       <img
-  //         alt={`synced image ${index}`}
-  //         ref={this.imageRefs[index]}
-  //         src={src}
-  //         className={`imagesync-image synced-image-${index}`}
-  //         style={{
-  //           transform: transform,
-  //         }}
-  //       />
-  //     </div>
-  //   );
-  // }
-
   renderImage = (src, index) => {
     const { scale, position } = this.state;
     const transform = `scale(${scale}) translate(${position[0]}px, ${position[1]}px)`;
@@ -498,7 +494,7 @@ class ImageSyncComponent extends Component {
     return (
         <img
           alt={`synced image ${index}`}
-          ref={this.imageRefs[index]}
+          ref={el => this.imageRefs[index] = el}
           src={src}
           className={`imagesync-image synced-image-${index}`}
           style={{
@@ -510,7 +506,9 @@ class ImageSyncComponent extends Component {
 
   render() {
     const { item } = this.props;
-    const { scale, minZoom, maxZoom, choices, controlsVisible } = this.state;
+    const { scale, minZoom, maxZoom, choices, controlsVisible, loadedImages } = this.state;
+
+    const imageTitles = ['Reference Image:', 'Enhanced 1:', 'Enhanced 2:'];
 
     return (
       <Block 
@@ -520,7 +518,7 @@ class ImageSyncComponent extends Component {
         onMouseMove={this.handleMouseMove}
       >
         <div className="imagesync-images-container">
-          {['Reference Image:', 'Enhanced 1:', 'Enhanced 2:'].map((title, index) => (
+          {loadedImages.map(({ index, path }) => (
             <div 
               key={index}
               data-image-index={index} 
@@ -530,10 +528,11 @@ class ImageSyncComponent extends Component {
               data-selected={choices[index]}
               style={{
                 backgroundColor: choices[index] ? 'rgba(243, 22, 22, 0.4)' : 'transparent',
+                width: `${100 / loadedImages.length}%`,
               }}
             >
               <h3 className="imagesync-title">
-                  {title} 
+                  {imageTitles[index]} 
                   <span className="imagesync-frame-percentage">
                       ({this.calculateFrameData(scale, index)})
                   </span>
@@ -542,12 +541,12 @@ class ImageSyncComponent extends Component {
               className="imagesync-image-wrapper"
               onDoubleClick={() => this.handleImageDoubleClick(index)}
               >
-                {this.renderImage(this.getImageSource(`image${index}`), index)}
+                {this.renderImage(path, index)}
               </div>
             </div>
           ))}
         </div>
-        <div 
+        {/* <div 
           className={`imagesync-controls-wrapper ${controlsVisible ? '' : 'hidden'}`}
           onMouseEnter={this.showControls}
           onMouseLeave={this.hideControls}
@@ -566,7 +565,7 @@ class ImageSyncComponent extends Component {
             <span>{scale.toFixed(1)}x</span>
             <button onClick={this.handleReset} className="imagesync-button">Reset</button>
           </div>
-        </div>
+        </div> */}
       </Block>
     );
   }

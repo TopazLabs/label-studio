@@ -21,6 +21,7 @@ import "./Choice";
 import DynamicChildrenMixin from "../../mixins/DynamicChildrenMixin";
 import { FF_LSDV_4583, isFF } from "../../utils/feature-flags";
 import { ReadOnlyControlMixin } from "../../mixins/ReadOnlyMixin";
+import { parseValue } from "../../utils/data";
 import SelectedChoiceMixin from "../../mixins/SelectedChoiceMixin";
 import { HintTooltip } from "../../components/Taxonomy/Taxonomy";
 import ClassificationBase from "./ClassificationBase";
@@ -125,7 +126,6 @@ const Model = types
 
     get serializableValue() {
       const choices = self.selectedValues();
-
       if (choices && choices.length) return { choices };
 
       return null;

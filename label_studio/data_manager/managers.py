@@ -23,9 +23,11 @@ from django.db.models import (
     OuterRef,
     Q,
     Subquery,
+    CharField,
     TextField,
     Value,
     When,
+    Func
 )
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast, Coalesce, Concat
@@ -37,6 +39,26 @@ from label_studio.core.utils.params import cast_bool_from_str
 logger = logging.getLogger(__name__)
 
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
+from django.db.models import Lookup
+from django.db.models.fields import Field
+
+class SubstringOf(Lookup):
+    lookup_name = 'substring_of'
+
+    def as_sql(self, compiler, connection):
+        # lhs: field value
+        # rhs: filter value
+        lhs, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
+
+        # Construct the SQL using INSTR: INSTR(filter_value, field_value) > 0
+        sql = 'INSTR(%s, {}) > 0'.format(lhs)
+        params = rhs_params + lhs_params
+
+        return sql, params
+
+Field.register_lookup(SubstringOf)
 
 
 class _Operator(BaseModel):
@@ -53,6 +75,7 @@ class _Operator(BaseModel):
     EMPTY: ClassVar[str] = 'empty'
     CONTAINS: ClassVar[str] = 'contains'
     NOT_CONTAINS: ClassVar[str] = 'not_contains'
+    SUBSTRING: ClassVar[str] = 'substring'
     REGEX: ClassVar[str] = 'regex'
 
 
@@ -72,9 +95,9 @@ operators = {
     Operator.EMPTY: '__isnull',
     Operator.CONTAINS: '__icontains',
     Operator.NOT_CONTAINS: '__icontains',
+    Operator.SUBSTRING: '',
     Operator.REGEX: '__regex',
 }
-
 
 def get_fields_for_filter_ordering(prepare_params):
     result = []
@@ -229,13 +252,17 @@ def add_result_filter(field_name, _filter, filter_expressions, project):
             return 'exit'
 
         q = Exists(_class.objects.filter(Q(task=OuterRef('pk')) & Q(result=value)))
-        filter_expressions.append(q if _filter.operator == Operator.EQUAL else ~q)
+
+        filter_expressions.append(q if _filter.operator in [Operator.EQUAL, Operator.SUBSTRING] else ~q)
         return 'continue'
     elif _filter.operator == Operator.CONTAINS:
         filter_expressions.append(Q(subquery))
         return 'continue'
     elif _filter.operator == Operator.NOT_CONTAINS:
         filter_expressions.append(~Q(subquery))
+        return 'continue'
+    elif _filter.operator == Operator.SUBSTRING:
+        filter_expressions.append(Q(subquery))
         return 'continue'
     elif _filter.operator == Operator.EMPTY:
         if cast_bool_from_str(_filter.value):
@@ -446,8 +473,25 @@ def apply_filters(queryset, filters, project, request):
         elif _filter.operator.startswith('not_'):
             cast_value(_filter)
             filter_expressions.append(~Q(**{field_name: _filter.value}))
+            
+        if _filter.operator == 'substring':
+            field_name = preprocess_field_name(_filter.filter, project.only_undefined_field)[0]
 
-        # all others
+            if field_name.startswith('data__'):
+                json_field = field_name.replace('data__', '')
+
+                # Annotate the queryset to extract the JSON field value
+                queryset = queryset.annotate(
+                    field_value=Cast(
+                        KeyTextTransform(json_field, 'data'), output_field=TextField()
+                    )
+                )
+
+                # Apply the 'substring_of' lookup
+                filter_expressions.append(Q(field_value__substring_of=_filter.value))
+            else:
+                # Non-JSON fields
+                filter_expressions.append(Q(**{f'{field_name}__substring_of': _filter.value}))
         else:
             cast_value(_filter)
             filter_expressions.append(Q(**{field_name: _filter.value}))

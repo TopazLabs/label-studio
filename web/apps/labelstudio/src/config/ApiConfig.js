@@ -63,6 +63,11 @@ export const API_CONFIG = {
     previousExports: "/projects/:pk/export/files",
     exportFormats: "/projects/:pk/export/formats",
 
+    // Visualization
+    categoricalData: "GET:/projects/:pk/visualize",
+    visualization: "POST:/projects/:pk/visualize",
+    createView: "POST:/dm/views",
+
     // Version
     version: "/version",
 

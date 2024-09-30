@@ -29,6 +29,8 @@ export const FilterItemsByOperation = (items: any[], filterItem: FilterListInter
       return equal(items, filterItem);
     case "not_equal":
       return notequal(items, filterItem);
+    case "substring":
+      return substring(items, filterItem);
     default:
       return items;
   }
@@ -137,6 +139,17 @@ const notequal = (items: any[], filterItem: FilterListInterface) => {
       const item = getFilteredPath(filterItem.path, obj);
 
       return item?.toString().toLowerCase() !== filterItem.value?.toLowerCase();
+    });
+  }
+  return items;
+};
+
+const substring = (items: any[], filterItem: FilterListInterface) => {
+  if (isDefined(filterItem.value)) {
+    return items.filter((obj) => {
+      const item = getFilteredPath(filterItem.path, obj);
+
+      return item?.toString().toLowerCase().includes(filterItem.value.toLowerCase());
     });
   }
   return items;

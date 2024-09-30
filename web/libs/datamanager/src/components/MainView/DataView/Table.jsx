@@ -345,7 +345,7 @@ export const DataView = injector(
     useShortcut("dm.open-labeling", () => {
       if (document.activeElement !== document.body) return;
 
-      const { highlighted } = dataStore;
+    const { highlighted } = dataStore;
       // don't close QuickView by Enter
 
       if (highlighted && !highlighted.isSelected) store.startLabeling(highlighted);
@@ -361,6 +361,7 @@ export const DataView = injector(
     // Render the UI for your table
     return (
       <Block name="data-view-dm" className="dm-content" style={{ pointerEvents: isLocked ? "none" : "auto" }}>
+        {/* <Button onClick={() => console.log(store)}>Print Store Contents</Button> */}
         {renderContent(content)}
       </Block>
     );

@@ -202,6 +202,9 @@ class ExportParamSerializer(serializers.Serializer):
         default=False, help_text='Download all tasks or only finished.', required=False
     )
 
+class VisualizationParamSerializer(serializers.Serializer):
+    include_all_tasks = serializers.BooleanField(default=False, required=False)
+    ignore_keys = serializers.CharField(default='', required=False)
 
 class BaseExportDataSerializerForInteractive(InteractiveMixin, BaseExportDataSerializer):
     pass

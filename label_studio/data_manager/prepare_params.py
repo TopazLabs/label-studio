@@ -138,6 +138,7 @@ class Operator(CustomEnum):
     LESS_OR_EQUAL = 'less_or_equal', 'Less than or equal to'
     CONTAINS = 'contains', 'Contains'
     NOT_CONTAINS = 'not_contains', 'Does not contain'
+    SUBSTRING = 'substring', 'Substring'
     EXISTS = 'exists', 'Exists'
     NOT_EXISTS = 'not_exists', 'Does not exist'
     STARTS_WITH = 'starts_with', 'Starts with'
