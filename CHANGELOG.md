@@ -1,6 +1,6 @@
 # Changelog
 
-## [67e5ea51e59103078d97b608d376a0446a1ef3cc,8a1f3825d3ed4a6b675d9e23e7319f4118ad3fab] - 2024-09-30
+## Commits [67e5ea51e59103078d97b608d376a0446a1ef3cc,8a1f3825d3ed4a6b675d9e23e7319f4118ad3fab] - 2024-09-30
 
 ### Added
 - New visualization feature for project data
@@ -31,7 +31,7 @@
 - This update includes significant changes to the data visualization capabilities of the application. Users can now create custom visualizations using SQL queries and view categorical data distributions.
 - The new 'id_str' field in the Task model may require a database migration.
 
-### Commits:
+### Commit Links:
 - [**visualizations API and visual interface, can now view variable images**](https://github.com/TopazLabs/label-studio/commit/67e5ea51e59103078d97b608d376a0446a1ef3cc)
 - [**ImageSync viewable data**](https://github.com/TopazLabs/label-studio/commit/8a1f3825d3ed4a6b675d9e23e7319f4118ad3fab)
 
