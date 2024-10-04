@@ -91,7 +91,6 @@
     }
   }
 }
-
 .project-card {
   --text-color: var(--sand_900);
   flex: 1;
@@ -103,6 +102,8 @@
   overflow: hidden;
   color: var(--text-color);
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.05);
+  max-width: 420px;
+  text-wrap: wrap;
 
   &__header {
     padding: 12px 16px;
