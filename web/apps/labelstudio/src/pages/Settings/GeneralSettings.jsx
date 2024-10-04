@@ -137,8 +137,8 @@ export const GeneralSettings = () => {
         method: "POST",
         body: { name: groupName },
       });
-      setProjectGroups([...projectGroups, newGroup]);
-      addGroup(newGroup.id);
+      setProjectGroups([...projectGroups, newGroup[0]]);
+      addGroup(newGroup[0].id);
     } catch (err) {
       console.error("Failed to create new group:", err);
     }
