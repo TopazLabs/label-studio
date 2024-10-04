@@ -70,7 +70,7 @@ export const GeneralSettings = () => {
       }
     };
     fetchProjectGroups();
-  }, []);
+  }, [project]);
 
   const toggleGroupInput = () => {
     setShowGroupInput(true);
@@ -82,7 +82,7 @@ export const GeneralSettings = () => {
     setGroupInputValue(value);
 
     const suggestions = projectGroups
-      .filter((g) => g.name.toLowerCase().startsWith(value.toLowerCase()) && !selectedGroups.includes(g.id))
+      .filter((g) => g && g.name.toLowerCase().startsWith(value.toLowerCase()) && !selectedGroups.includes(g.id))
       .slice(0, 5);
     setGroupSuggestions(suggestions);
     console.log("suggestions", suggestions);
@@ -91,7 +91,7 @@ export const GeneralSettings = () => {
   const handleGroupInputBlur = async () => {
     if (groupInputValue) {
       const existingGroup = projectGroups.find(
-        (g) => g.name.toLowerCase() === groupInputValue.toLowerCase(),
+        (g) => g && g.name.toLowerCase() === groupInputValue.toLowerCase(),
       );
       if (existingGroup) {
         addGroup(existingGroup.id);
@@ -137,8 +137,8 @@ export const GeneralSettings = () => {
         method: "POST",
         body: { name: groupName },
       });
-      setProjectGroups([...projectGroups, newGroup[0]]);
-      addGroup(newGroup[0].id);
+      setProjectGroups([...projectGroups, newGroup]);
+      addGroup(newGroup.id);
     } catch (err) {
       console.error("Failed to create new group:", err);
     }

@@ -1,7 +1,9 @@
 .project-group-section {
   border: 1px solid #ccc;
   margin-bottom: 10px;
-  background-color: #fff;
+  border-radius: 8px;
+  border-bottom: 0;
+  background-color: lightsteelblue;
 
   &.dragging {
     opacity: 0.5;
@@ -45,9 +47,13 @@
   }
 
   &__project-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
+    padding: 40px;
+    display: grid;
+    grid-autoflow: columns;
+    box-sizing: border-box;
+    grid-gap: 32px;
+    grid-auto-rows: 1fr;
+    grid-template-columns: repeat(4, 1fr);
   }
 
   &__link {
@@ -55,7 +61,6 @@
     display: block;
     display: flex;
     text-decoration: none;
-    height: 160px;
 
     &:hover {
       color: #000;
@@ -260,6 +265,31 @@
     margin: 0;
   }
 
+  &__action {
+    margin: 2rem 0;
+  }
+}
+
+.empty-projects-page {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  &__heidi {
+    height: 12rem;
+    margin-top: 6rem;
+  }
+  &__header {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 16px;
+    color: var(--sand_900);
+  }
+  p {
+    font-size: 1.25rem;
+    color: var(--sand_700);
+    margin: 0;
+  }
   &__action {
     margin: 2rem 0;
   }
