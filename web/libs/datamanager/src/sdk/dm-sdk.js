@@ -55,7 +55,7 @@ import { LSFWrapper } from "./lsf-sdk";
 import { taskToLSFormat } from "./lsf-utils";
 
 const DEFAULT_TOOLBAR =
-  "actions columns filters ordering label-button loading-possum error-box | refresh import-button export-button visualize-button view-toggle";
+  "actions columns filters ordering label-button loading-possum error-box | refresh import-button export-button visualize-button dropbox-button view-toggle";
 
 const prepareInstruments = (instruments) => {
   const result = Object.entries(instruments).map(([name, builder]) => [name, builder({ inject, observer })]);
@@ -157,6 +157,7 @@ export class DataManager {
     this.showPreviews = config.showPreviews ?? false;
     this.polling = config.polling;
     this.toolbar = config.toolbar ?? DEFAULT_TOOLBAR;
+    console.log("Toolbar", config.toolbar);
     this.spinner = config.spinner;
     this.spinnerSize = config.spinnerSize;
     this.instruments = prepareInstruments(config.instruments ?? {});

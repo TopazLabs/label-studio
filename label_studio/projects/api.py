@@ -17,6 +17,7 @@ from data_manager.functions import filters_ordering_selected_items_exist, get_pr
 from django.conf import settings
 from django.db import IntegrityError
 from django.db.models import F
+from django.db import transaction
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django_filters import CharFilter, FilterSet
@@ -26,7 +27,15 @@ from ml.serializers import MLBackendSerializer
 from projects.functions.next_task import get_next_task
 from projects.functions.stream_history import get_label_stream_history
 from projects.functions.utils import recalculate_created_annotations_and_labels_from_scratch
-from projects.models import Project, ProjectImport, ProjectManager, ProjectReimport, ProjectSummary
+from projects.models import (
+    Project,
+    ProjectImport,
+    ProjectManager,
+    ProjectReimport,
+    ProjectSummary,
+    ProjectGroup,
+    ProjectGroupList
+)
 from projects.serializers import (
     GetFieldsSerializer,
     ProjectImportSerializer,
@@ -35,8 +44,10 @@ from projects.serializers import (
     ProjectReimportSerializer,
     ProjectSerializer,
     ProjectSummarySerializer,
+    ProjectGroupSerializer,
 )
 from rest_framework import filters, generics, status
+from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound
 from rest_framework.exceptions import ValidationError as RestValidationError
 from rest_framework.pagination import PageNumberPagination
@@ -256,7 +267,7 @@ class ProjectListAPI(generics.ListCreateAPIView):
         )
         if filter in ['pinned_only', 'exclude_pinned']:
             projects = projects.filter(pinned_at__isnull=filter == 'exclude_pinned')
-        return ProjectManager.with_counts_annotate(projects, fields=fields).prefetch_related('members', 'created_by')
+        return ProjectManager.with_counts_annotate(projects, fields=fields).prefetch_related('members', 'created_by', 'groups')
 
     def get_serializer_context(self):
         context = super(ProjectListAPI, self).get_serializer_context()
@@ -265,7 +276,10 @@ class ProjectListAPI(generics.ListCreateAPIView):
 
     def perform_create(self, ser):
         try:
-            ser.save(organization=self.request.user.active_organization)
+            project = ser.save(organization=self.request.user.active_organization)
+            groups = self.request.data.get('groups', [])
+            if groups:
+                project.groups.set(groups)  # Set the groups for the project
         except IntegrityError as e:
             if str(e) == 'UNIQUE constraint failed: project.title, project.created_by_id':
                 raise ProjectExistException(
@@ -414,6 +428,9 @@ class ProjectAPI(generics.RetrieveUpdateDestroyAPIView):
                 pass
 
         return super(ProjectAPI, self).patch(request, *args, **kwargs)
+    
+    def perform_update(self, ser):
+        project = ser.save()
 
     def perform_destroy(self, instance):
         # we don't need to relaculate counters if we delete whole project
@@ -834,3 +851,149 @@ class ProjectModelVersions(generics.RetrieveAPIView):
         count = project.delete_predictions(model_version=model_version)
 
         return Response(data=count)
+
+class ProjectGroupListAPI(APIView):
+    def get(self, request):
+        user = request.user
+        # Initialize the user's ProjectGroupList if it doesn't exist
+        self.initialize_user_group_list(user)
+
+        # Get the ordered list of project groups for the user
+        ordered_groups = self.get_ordered_groups(user)
+
+        # Serialize the ordered list of project groups
+        serializer = ProjectGroupSerializer(ordered_groups, many=True)
+        return Response(serializer.data)
+
+    def initialize_user_group_list(self, user):
+        existing_groups = ProjectGroupList.objects.filter(user=user).exists()
+        if not existing_groups:
+            with transaction.atomic():
+                groups = ProjectGroup.objects.all().order_by('id')
+                prev_node = None
+                for group in groups:
+                    node = ProjectGroupList.objects.create(user=user, group=group, prev_group=prev_node)
+                    if prev_node:
+                        prev_node.next_group = node
+                        prev_node.save()
+                    prev_node = node
+
+    def get_ordered_groups(self, user):
+        head_node = ProjectGroupList.objects.filter(user=user, prev_group__isnull=True).first()
+        ordered_groups = []
+        current_node = head_node
+        while current_node:
+            ordered_groups.append(current_node.group)
+            current_node = current_node.next_group
+        return ordered_groups
+
+class ProjectGroupListOpsAPI(APIView):
+    def post(self, request):
+        op = request.data.get('op')
+        if op not in ['swap', 'move', 'reset']:
+            return Response({"error": "Invalid operation. Use 'swap', 'move', or 'reset'."}, status=400)
+
+        user = request.user
+        if op == 'swap':
+            return self.swap_groups(request, user)
+        elif op == 'move':
+            return self.move_group(request, user)
+        elif op == 'reset':
+            self.reset_linked_list(user)
+            return self.get_ordered_groups_response(user)
+
+    def swap_groups(self, request, user):
+        group_a_id = request.data.get('a')
+        group_b_id = request.data.get('b')
+
+        if not group_a_id or not group_b_id:
+            return Response({"error": "Both 'a' and 'b' IDs are required for swap."}, status=400)
+
+        try:
+            node_a = ProjectGroupList.objects.get(user=user, group_id=group_a_id)
+            node_b = ProjectGroupList.objects.get(user=user, group_id=group_b_id)
+        except ProjectGroupList.DoesNotExist:
+            return Response({"error": "One or both project groups do not exist for this user."}, status=404)
+
+        # Swap the prev_group and next_group of node_a and node_b
+        node_a_prev, node_a_next = node_a.prev_group, node_a.next_group
+        node_b_prev, node_b_next = node_b.prev_group, node_b.next_group
+
+        node_a.prev_group, node_a.next_group = node_b_prev, node_b_next
+        node_b.prev_group, node_b.next_group = node_a_prev, node_a_next
+
+        # Update surrounding nodes
+        if node_a_prev:
+            node_a_prev.next_group = node_b
+        if node_a_next and node_a_next != node_b:
+            node_a_next.prev_group = node_b
+        if node_b_prev and node_b_prev != node_a:
+            node_b_prev.next_group = node_a
+        if node_b_next:
+            node_b_next.prev_group = node_a
+
+        # Save all affected nodes
+        node_a.save()
+        node_b.save()
+        if node_a_prev: node_a_prev.save()
+        if node_a_next and node_a_next != node_b: node_a_next.save()
+        if node_b_prev and node_b_prev != node_a: node_b_prev.save()
+        if node_b_next: node_b_next.save()
+
+        return self.get_ordered_groups_response(user)
+
+    def move_group(self, request, user):
+        group_id = request.data.get('id')
+        next_id = request.data.get('next')
+        prev_id = request.data.get('prev')
+
+        if not group_id or (next_id is None and prev_id is None):
+            return Response({"error": "Group ID and either 'next' or 'prev' ID are required for move."}, status=400)
+
+        try:
+            node = ProjectGroupList.objects.get(user=user, group_id=group_id)
+            target_node = ProjectGroupList.objects.get(user=user, group_id=next_id if next_id is not None else prev_id)
+        except ProjectGroupList.DoesNotExist:
+            return Response({"error": "One or both project groups do not exist for this user."}, status=404)
+
+        # Remove node from its current position
+        if node.prev_group:
+            node.prev_group.next_group = node.next_group
+            node.prev_group.save()
+        if node.next_group:
+            node.next_group.prev_group = node.prev_group
+            node.next_group.save()
+            
+        node.refresh_from_db()
+        target_node.refresh_from_db()
+
+        # Insert node at new position
+        if next_id is not None:
+            node.prev_group = target_node.prev_group
+            node.next_group = target_node
+            if target_node.prev_group:
+                target_node.prev_group.next_group = node
+                target_node.prev_group.save()
+            target_node.prev_group = node
+            target_node.save()
+        else:
+            node.next_group = target_node.next_group
+            node.prev_group = target_node
+            if target_node.next_group:
+                target_node.next_group.prev_group = node
+                target_node.next_group.save()
+            target_node.next_group = node
+            target_node.save()
+
+        node.save()
+
+        return self.get_ordered_groups_response(user)
+
+    def reset_linked_list(self, user):
+        ProjectGroupList.objects.filter(user=user).delete()
+        ProjectGroupListAPI().initialize_user_group_list(user)
+
+    def get_ordered_groups_response(self, user):
+        ordered_groups = ProjectGroupListAPI().get_ordered_groups(user)
+        serializer = ProjectGroupSerializer(ordered_groups, many=True)
+        return Response(serializer.data)

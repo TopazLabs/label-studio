@@ -1,5 +1,39 @@
-.projects-page {
-  min-height: calc(100vh - var(--header-height));
+.project-group-section {
+  border: 1px solid #ccc;
+  margin-bottom: 10px;
+  background-color: #fff;
+
+  &.dragging {
+    opacity: 0.5;
+  }
+
+  &.drag-over {
+    border-top: 2px solid black;
+  }
+
+  &__header {
+    padding: 10px;
+    cursor: pointer;
+    background-color: #f7f7f7;
+    display: flex;
+    align-items: center;
+  }
+
+  &__title {
+    font-weight: bolder;
+    flex: 1;
+    font-size: 24px;
+    -webkit-font-smoothing: antialiased;
+}
+
+  &__toggle {
+    margin-left: auto;
+    font-size: 14px;
+  }
+
+  &__projects {
+    padding: 10px;
+  }
 
   &__loading {
     width: 100%;
@@ -10,14 +44,10 @@
     min-height: calc(100vh - var(--header-height));
   }
 
-  &__list {
-    padding: 40px;
-    display: grid;
-    grid-autoflow: columns;
-    box-sizing: border-box;
-    grid-gap: 32px;
-    grid-auto-rows: 1fr;
-    grid-template-columns: repeat(4, 1fr);
+  &__project-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
   }
 
   &__link {
@@ -25,6 +55,7 @@
     display: block;
     display: flex;
     text-decoration: none;
+    height: 160px;
 
     &:hover {
       color: #000;
@@ -43,50 +74,21 @@
   }
 
   @media (min-width: 1200px) {
-    &__list {
+    &__project-list {
       grid-template-columns: repeat(3, 1fr);
     }
   }
 
   @media (min-width: 1360px) {
-    &__list {
+    &__project-list {
       grid-template-columns: repeat(4, 1fr);
     }
   }
 
   @media (min-width: 1460px) {
-    &__list {
+    &__project-list {
       grid-template-columns: repeat(5, 1fr);
     }
-  }
-}
-
-.empty-projects-page {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  &__heidi {
-    height: 12rem;
-    margin-top: 6rem;
-  }
-
-  &__header {
-    font-size: 32px;
-    font-weight: 700;
-    margin: 16px;
-    color: var(--sand_900);
-  }
-
-  p {
-    font-size: 1.25rem;
-    color: var(--sand_700);
-    margin: 0;
-  }
-
-  &__action {
-    margin: 2rem 0;
   }
 }
 
@@ -105,6 +107,8 @@
   &__header {
     padding: 12px 16px;
     border-bottom: 1px solid var(--sand_300);
+    display: flex;
+    align-items: center;
   }
 
   &__menu {
@@ -217,7 +221,7 @@
   &_colored {
     --text-color: var(--sand_0);
     background-color: var(--background-color);
-    
+
     & .project-card__header {
       background-color: var(--header-color);
       box-shadow: none;
@@ -228,5 +232,34 @@
         --icon-color: var(--sand_0);
       }
     }
+  }
+}
+
+.empty-projects-page {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  &__heidi {
+    height: 12rem;
+    margin-top: 6rem;
+  }
+
+  &__header {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 16px;
+    color: var(--sand_900);
+  }
+
+  p {
+    font-size: 1.25rem;
+    color: var(--sand_700);
+    margin: 0;
+  }
+
+  &__action {
+    margin: 2rem 0;
   }
 }

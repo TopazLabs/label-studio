@@ -420,6 +420,9 @@ class ImageSyncComponent extends Component {
   
     const true_w_i = image.naturalWidth;
     const true_h_i = image.naturalHeight;
+
+    //  Get screen resolution scale:
+    const screen_scale = Math.min(window.devicePixelRatio, 2);
     
     // Calculate the scaled dimensions of the image
     const scaled_w_i = true_w_i * scale;
@@ -430,15 +433,21 @@ class ImageSyncComponent extends Component {
     const visible_h = Math.min(scaled_h_i, h_c);
   
     // Calculate the number of original image pixels being displayed
-    const displayed_w = Math.round(visible_w / scale);
-    const displayed_h = Math.round(visible_h / scale);
+    let displayed_w = Math.round(visible_w / scale);
+    let displayed_h = Math.round(visible_h / scale);
+    const display_aspect_ratio = displayed_w / displayed_h;
+
+    const displayScale = scale; // * screen_scale;
+
+    // displayed_w = w_c / (true_w_i * displayScale / w_c);
+    // displayed_h = displayed_w / display_aspect_ratio;
   
     const percentage = ((visible_w * visible_h) / (true_w_i * true_h_i) * 100).toFixed(2);
   
     console.debug(`Displayed dimensions: ${displayed_w}x${displayed_h}`);
     console.debug(`Percentage of image visible: ${percentage}%`);
   
-    return `${(scale * 100).toFixed(2)}%, ${displayed_w}x${displayed_h}px of ${true_w_i}x${true_h_i}px`;
+    return `${(displayScale * 100).toFixed(2)}%, ${displayed_w.toFixed(0)}x${displayed_h}px of ${true_w_i}x${true_h_i}px`;
   }
 
 

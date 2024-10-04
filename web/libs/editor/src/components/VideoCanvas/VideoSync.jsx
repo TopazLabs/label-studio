@@ -19,10 +19,12 @@ class VideoSyncComponent extends Component {
             minZoom: 0.5,
             maxZoom: 20,
             videosFitted: false,
+            loadedVideos: [],
 
             // Component State
             isDragging: false,
             lastMousePosition: [0, 0],
+            controlsVisible: false,
 
             // UI State:
             choices: [],
@@ -53,40 +55,77 @@ class VideoSyncComponent extends Component {
     componentDidMount() {
         document.addEventListener('keydown', this.handleKeyDown);
         window.addEventListener('resize', this.handleResize);
-        addEventListener('wheel', this.handleWheel, { passive: false });
-        this.fitVideosToColumns();
+        document.addEventListener('mouseup', this.handleMouseUp);
+        document.addEventListener('mousemove', this.handleMouseMove);
+        this.containerRef.current.addEventListener('wheel', this.handleWheel, { passive: false });
+        this.loadVideos();
         this.startPolling();
-        this.initializeVideos();
-    }
-
-    componentWillUnmount() {
+      }
+    
+      componentWillUnmount() {
         document.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('resize', this.handleResize);
+        document.removeEventListener('mouseup', this.handleMouseUp);
+        document.removeEventListener('mousemove', this.handleMouseMove);
+        if (this.containerRef.current) {
+          this.containerRef.current.removeEventListener('wheel', this.handleWheel);
+        }
         this.stopPolling();
         if (this.mouseLeaveTimer) {
-            clearTimeout(this.mouseLeaveTimer);
+          clearTimeout(this.mouseLeaveTimer);
         }
-    }
+      }
+    
 
-    initializeVideos() {
-        this.videoRefs.forEach((ref, index) => {
-            const video = ref.current;
-            if (video) {
-                video.addEventListener('loadedmetadata', () => this.handleLoadMeta(index));
-                video.addEventListener('timeupdate', this.handleTimeUpdate);
-            }
+      loadVideos() {
+        const { item } = this.props;
+        const videoPaths = ['video0', 'video1', 'video2'];
+    
+        videoPaths.forEach((videoName, index) => {
+          const videoPath = this.getVideoSource(videoName);
+          if (videoPath) {
+            const video = document.createElement('video');
+            video.onloadedmetadata = () => {
+              this.setState(prevState => {
+                const newLoadedVideos = [...prevState.loadedVideos, { index, path: videoPath }];
+                newLoadedVideos.sort((a, b) => a.index - b.index);
+                return { loadedVideos: newLoadedVideos };
+              }, () => {
+                this.fitVideosToColumns();
+                this.initializeVideos();
+              });
+            };
+            video.src = videoPath;
+          }
         });
-    }
+      }
+    
+      initializeVideos = () => {
+        this.setState(prevState => {
+          const updatedVideos = prevState.loadedVideos.map((loadedVideo, index) => {
+            if (!loadedVideo.initialized) {
+              const video = this.videoRefs[index];
+              if (video && video.current) {
+                video.current.addEventListener('loadedmetadata', () => this.handleLoadMeta(index));
+                video.current.addEventListener('timeupdate', this.handleTimeUpdate);
+              }
+              return { ...loadedVideo, initialized: true };
+            }
+            return loadedVideo;
+          });
+          return { loadedVideos: updatedVideos };
+        });
+      }
 
     startPolling = () => {
         this.pollInterval = setInterval(this.updateChoices, POLL_INTERVAL_MS);
-    }
-
-    stopPolling = () => {
+      }
+    
+      stopPolling = () => {
         if (this.pollInterval) {
-            clearInterval(this.pollInterval);
+          clearInterval(this.pollInterval);
         }
-    }
+      }  
 
     handleResize = () => {
         this.fitVideosToColumns();
@@ -160,56 +199,25 @@ class VideoSyncComponent extends Component {
 
     handleWheel(e) {
         e.preventDefault();
+        e.stopPropagation();
+    
         const delta = e.deltaY * -0.001;
         const newScale = Math.max(this.state.minZoom, Math.min(this.state.scale * (1 + delta), this.state.maxZoom));
-        
-        this.setState(prevState => {
-            const { scale, position } = prevState;
-            
-            // Find the first element with the "VideoSync-video-container" class
-            const container = document.querySelector('.VideoSync-video-container');
-            if (!container) return prevState; // If no container found, return current state
-            
-            const containerWidth = container.style.width;
-            const containerHeight = container.style.height;
-            
-            // Get the dimensions of the video (assuming the first video is representative)
-            const video = this.videoRefs[0].current;
-            const imgWidth = video.videoWidth * scale;
-            const imgHeight = video.videoHeight * scale;
-            
-            // Calculate the center of the container in image coordinates
-            const containerCenterX = (containerWidth / 2 - position[0]) / scale;
-            const containerCenterY = (containerHeight / 2 - position[1]) / scale;
-            
-            // Calculate the new position based on the change in scale
-            const scaleFactor = newScale / scale;
-            const newX = -containerCenterX * newScale + containerWidth / 2;
-            const newY = -containerCenterY * newScale + containerHeight / 2;
-            
-            // do a console.log to debug this code:
-            console.log('Wheel event:', {
-                delta,
-                newScale,
-                containerWidth,
-                containerHeight,
-                videoWidth: video.videoWidth,
-                videoHeight: video.videoHeight,
-                currentScale: scale,
-                currentPosition: position,
-                containerCenterX,
-                containerCenterY,
-                newX,
-                newY,
-                scaleFactor
-            });
-
-            // Constrain the new position
-            const newPosition = this.constrainPosition(newX, newY, newScale);
-            
-            return { scale: newScale, position: newPosition };
-        });
-    }
+    
+        const videoContainer = e.target.closest('[data-video-index]');
+    
+        if (!videoContainer) {
+          return;
+        }
+        const videoIndex = parseInt(videoContainer.getAttribute('data-video-index'), 10);
+    
+        // Get mouse position for the current video
+        const position = this.getMousePositionOnVideo(e, videoIndex);
+    
+        this.setState(prevState => ({
+          scale: newScale
+        }));
+      }
     // handleWheel = (e) => {
     //     e.preventDefault();
     //     const delta = e.deltaY * -0.01;
@@ -267,10 +275,10 @@ class VideoSyncComponent extends Component {
     handleMouseDown = (e) => {
         e.preventDefault();
         this.setState({
-            isDragging: true,
-            lastMousePosition: [e.clientX, e.clientY]
+          isDragging: true,
+          lastMousePosition: [e.clientX, e.clientY]
         });
-    }
+      }
 
     handleMouseUp = () => {
         this.setState({ isDragging: false });
@@ -278,27 +286,27 @@ class VideoSyncComponent extends Component {
 
     handleMouseMove = (e) => {
         if (this.state.isDragging) {
-            const deltaX = e.clientX - this.state.lastMousePosition[0];
-            const deltaY = e.clientY - this.state.lastMousePosition[1];
-
-            this.setState(prevState => ({
-                position: this.constrainPosition(prevState.position[0] + (deltaX * prevState.scale), prevState.position[1] + (deltaY * prevState.scale), prevState.scale),
-                lastMousePosition: [e.clientX, e.clientY]
-            }));
-        } else {
-            const { clientHeight } = document.documentElement;
-            const threshold = clientHeight - 70; // Adjust based on your controls height
-
-            if (e.clientY > threshold) {
-            this.showControls();
-            if (this.mouseLeaveTimer) {
-                clearTimeout(this.mouseLeaveTimer);
-                this.mouseLeaveTimer = null;
+          const deltaX = e.clientX - this.state.lastMousePosition[0];
+          const deltaY = e.clientY - this.state.lastMousePosition[1];
+    
+          this.setState(prevState => ({
+            position: this.constrainPosition(
+              prevState.position[0] + (deltaX / prevState.scale),
+              prevState.position[1] + (deltaY / prevState.scale),
+              prevState.scale),
+            lastMousePosition: [e.clientX, e.clientY]
+          }));
+        } 
+        else {
+            const { clientY } = e;
+            const { innerHeight } = window;
+            const threshold = innerHeight - 300; // Show controls when mouse is within 300px of the bottom
+      
+            if (clientY > threshold && !this.state.controlsVisible) {
+              this.showControls();
             }
-            } else if (!this.mouseLeaveTimer) {
-                this.mouseLeaveTimer = setTimeout(() => {
-                    this.hideControls();
-                }, 2000); // Hide controls after 2 seconds
+            else if (clientY <= threshold && this.state.controlsVisible) {
+              this.hideControls();
             }
         }
     }
@@ -309,9 +317,10 @@ class VideoSyncComponent extends Component {
 
     handleLoadMeta(index) {
         const video = this.videoRefs[index].current;
-        if (index === 0) {
-            this.setState({ duration: video.duration });
-        }
+        this.setState( prevState => ({ 
+            duration: Math.max(prevState.duration, video.duration),
+            framerate: Math.max(prevState.framerate, video.getVideoPlaybackQuality().totalVideoFrames / video.duration)
+        }));
         video.currentTime = 0.1;
     }
 
@@ -413,51 +422,58 @@ class VideoSyncComponent extends Component {
         const { scale, position } = this.state;
         const video = this.videoRefs[videoIndex].current;
         const container = video.parentElement;
-
+    
+        // Get the bounding rectangles
         const containerRect = container.getBoundingClientRect();
         const videoRect = video.getBoundingClientRect();
-
+    
+        // Calculate the actual video dimensions considering the scale
         const actualVideoWidth = videoRect.width / scale;
         const actualVideoHeight = videoRect.height / scale;
-
+    
+        // Calculate the offset of the video within the container
         const videoOffsetX = (containerRect.width - actualVideoWidth) / 2;
         const videoOffsetY = (containerRect.height - actualVideoHeight) / 2;
-
+    
+        // Calculate the mouse position relative to the video
         let x = (e.clientX - containerRect.left - videoOffsetX - position[0]) / scale;
         let y = (e.clientY - containerRect.top - videoOffsetY - position[1]) / scale;
-
+    
+        // Ensure the coordinates are within the video bounds
         x = Math.max(0, Math.min(x, video.videoWidth));
         y = Math.max(0, Math.min(y, video.videoHeight));
-
+    
         return { x: Math.round(x), y: Math.round(y) };
-    }
+      }
 
     fitVideosToColumns = () => {
-        const containerWidth = this.containerRef.current.clientWidth / 3;
-        this.videoRefs.forEach(ref => {
-            const video = ref.current;
-            if (video) {
-                video.style.width = `${containerWidth}px`;
-                video.style.height = 'auto';
-            }
+        const containerWidth = this.containerRef.current.clientWidth / this.state.loadedVideos.length;
+        this.state.loadedVideos.forEach((loadedVideo, index) => {
+          const video = this.videoRefs[index].current;
+          if (video) {
+            const aspectRatio = video.videoWidth / video.videoHeight;
+            const newHeight = containerWidth / aspectRatio;
+            video.style.width = `${containerWidth}px`;
+            video.style.height = `${newHeight}px`;
+          }
         });
-
+    
         this.setState({ scale: 1, position: [0, 0], videosFitted: true });
-    }
+      }
 
-    updateChoices = () => {
+      updateChoices = () => {
         const choicesContainer = document.querySelector('.lsf-choices');
         if (choicesContainer) {
-            const newChoices = Array.from(choicesContainer.children).map(choice => {
-                const checkbox = choice.querySelector('input[type="checkbox"]');
-                return checkbox ? checkbox.checked : false;
-            });
-
-            if (JSON.stringify(newChoices) !== JSON.stringify(this.state.choices)) {
-                this.setState({ choices: newChoices });
-            }
+          const newChoices = Array.from(choicesContainer.children).map(choice => {
+            const checkbox = choice.querySelector('input[type="checkbox"]');
+            return checkbox ? checkbox.checked : false;
+          });
+    
+          if (JSON.stringify(newChoices) !== JSON.stringify(this.state.choices)) {
+            this.setState({ choices: newChoices });
+          }
         }
-    }
+      }
 
     showControls = () => {
         this.setState({ controlsVisible: true });
@@ -553,25 +569,42 @@ class VideoSyncComponent extends Component {
         return parseValue(item[videoName], store.task.dataObj);
     }
 
-    renderVideo(src, index) {
+    renderVideo = (src, index) => {
+        const { scale, position } = this.state;
+        const transform = `scale(${scale}) translate(${position[0]}px, ${position[1]}px)`;
+    
         return (
-            <video
+          <video
             ref={this.videoRefs[index]}
-            src={src}
+            src={this.getVideoSource(`video${index}`)}
             className={`VideoSync-video synced-video-${index}`}
             style={{
-                transform: `scale(${this.state.scale}) translate(${this.state.position[0]}px, ${this.state.position[1]}px)`,
+                position: 'relative',
+                top: '0%',
+                left: '0%',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                transform: transform,
                 transformOrigin: 'center center',
+                imageRendering: 'pixelated',
+                msInterpolationMode: 'nearest-neighbor',
                 cursor: this.state.isDragging ? 'grabbing' : 'grab',
             }}
-            loop // Add this attribute
+            loop
             onTimeUpdate={this.handleTimeUpdate}
-            />
+          />
         );
-    }
+      }
+    
+      getVideoTitle(index) {
+        const titles = ['Reference video:', 'Enhanced 1:', 'Enhanced 2:'];
+        return titles[index] || `Video ${index}`;
+      }
 
     render() {
         const {
+            loadedVideos,
             scale,
             minZoom,
             maxZoom,
@@ -600,49 +633,29 @@ class VideoSyncComponent extends Component {
               ref={this.containerRef}
             >
               <div className="VideoSync-container">
-                {['Reference video:', 'Enhanced 1:', 'Enhanced 2:'].map((title, index) => (
-                  <div
+                {loadedVideos.map(({ index, path }) => (
+                    <div
                     key={index}
-                    className={`VideoSync-item${choices[index] ? ' selected' : ''}`}
                     data-video-index={index}
                     data-selected={choices[index]}
                     onMouseDown={this.handleMouseDown}
                     onMouseUp={this.handleMouseUp}
-                    onMouseMove={this.handleMouseMove}
                     onWheel={this.handleWheel}
                     onDoubleClick={() => this.handleVideoDoubleClick(index)}
-                  >
+                    className={`VideoSync-item${choices[index] ? ' selected' : ''}`}
+                    >
                     <h3 className="VideoSync-title">
-                            {title} 
-                            <span className="VideoSync-frame-percentage">
-                                ({this.calculateFramePercentage(scale, index)})
-                            </span>
-                        </h3>
-                    <div className={"VideoSync-video-container"}>
-                      <video
-                        ref={this.videoRefs[index]}
-                        src={this.getVideoSource(`video${index}`)}
-                        className={`VideoSync-video synced-video-${index}`}
-                        style={{
-                            position: 'relative',
-                            top: '0%',
-                            left: '0%',
-                            maxWidth: '100%',
-                            maxHeight: '100%',
-                            objectFit: 'contain',
-                            transform: transform,
-                            transformOrigin: 'center center',
-                            imageRendering: 'pixelated',
-                            msInterpolationMode: 'nearest-neighbor',
-                            cursor: this.state.isDragging ? 'grabbing' : 'grab',
-                        }}
-                        loop
-                        onTimeUpdate={this.handleTimeUpdate}
-                      />
+                        {this.getVideoTitle(index)}
+                        <span className="VideoSync-frame-percentage">
+                        ({this.calculateFramePercentage(scale, index)})
+                        </span>
+                    </h3>
+                    <div className="VideoSync-video-container">
+                        {this.renderVideo(path, index)}
                     </div>
-                  </div>
+                    </div>
                 ))}
-              </div>
+                </div>
               <div
                 className={`VideoControls-wrapper ${controlsVisible ? '' : 'hidden'}`}
                 onMouseEnter={this.showControls}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import { useParams as useRouterParams } from "react-router";
 import { Redirect } from "react-router-dom";
 import { Button } from "../../components";
@@ -17,27 +17,30 @@ import { EmptyProjectsList, ProjectsList } from "./ProjectsList";
 
 const getCurrentPage = () => {
   const pageNumberFromURL = new URLSearchParams(location.search).get("page");
-
   return pageNumberFromURL ? Number.parseInt(pageNumberFromURL) : 1;
 };
 
 export const ProjectsPage = () => {
-  const api = React.useContext(ApiContext);
+  const api = useContext(ApiContext);
   const abortController = useAbortController();
-  const [projectsList, setProjectsList] = React.useState([]);
-  const [networkState, setNetworkState] = React.useState(null);
+  const [projectsList, setProjectsList] = useState([]);
+  const [projectGroups, setProjectGroups] = useState([]);
+  const [networkState, setNetworkState] = useState(null);
   const [currentPage, setCurrentPage] = useState(getCurrentPage());
   const [totalItems, setTotalItems] = useState(1);
   const setContextProps = useContextProps();
   const defaultPageSize = Number.parseInt(localStorage.getItem("pages:projects-list") ?? 30);
 
-  const [modal, setModal] = React.useState(false);
+  const [modal, setModal] = useState(false);
   const openModal = setModal.bind(null, true);
   const closeModal = setModal.bind(null, false);
 
+  const [groupedProjects, setGroupedProjects] = useState({});
+
+  /** Fetch projects from the API */
   const fetchProjects = async (page = currentPage, pageSize = defaultPageSize) => {
     setNetworkState("loading");
-    abortController.renew(); // Cancel any in flight requests
+    abortController.renew();
 
     const requestParams = { page, page_size: pageSize };
 
@@ -45,6 +48,7 @@ export const ProjectsPage = () => {
       requestParams.include = [
         "id",
         "title",
+        "groups",
         "created_by",
         "created_at",
         "color",
@@ -74,6 +78,7 @@ export const ProjectsPage = () => {
           include: [
             "id",
             "description",
+            "groups",
             "num_tasks_with_annotations",
             "task_number",
             "skipped_annotations_number",
@@ -92,7 +97,6 @@ export const ProjectsPage = () => {
         setProjectsList((prev) =>
           additionalData.results.map((project) => {
             const prevProject = prev.find(({ id }) => id === project.id);
-
             return {
               ...prevProject,
               ...project,
@@ -103,20 +107,95 @@ export const ProjectsPage = () => {
     }
   };
 
+  const fetchProjectGroups = async () => {
+    try {
+      const data = await api.callApi("projectGroups", {
+        params: {},
+      });
+
+      console.log("Fetched project groups:", data); // Log fetched data
+      setProjectGroups(data ?? []);
+    } catch (err) {
+      console.error("Failed to fetch project groups:", err);
+    }
+  };
+
+  /** Load the next page of projects */
   const loadNextPage = async (page, pageSize) => {
     setCurrentPage(page);
     await fetchProjects(page, pageSize);
   };
 
-  React.useEffect(() => {
+  /** Map projects to their groups */
+  const mapProjectsToGroups = useCallback(() => {
+    const grouped = {};
+
+    projectsList.forEach((project) => {
+      if (project.groups && project.groups.length > 0) {
+        project.groups.forEach((groupId) => {
+          if (!grouped[groupId]) {
+            grouped[groupId] = [];
+          }
+          grouped[groupId].push(project);
+        });
+      } else {
+        if (!grouped["ungrouped"]) {
+          grouped["ungrouped"] = [];
+        }
+        grouped["ungrouped"].push(project);
+      }
+    });
+
+    setGroupedProjects(grouped);
+  }, [projectsList]);
+
+  /** Handle drag-and-drop operations */
+  const handleGroupDrop = async (draggedGroupId, targetGroupId, dropkey) => {
+    if (draggedGroupId === targetGroupId) return;
+
+    // Prepare the operation data
+    const operationData = {
+      op: "move",
+      id: parseInt(draggedGroupId),
+    };
+
+    operationData[dropkey] = parseInt(targetGroupId);
+    
+    try {
+      // Update the backend
+      await api.callApi("groupOperations", {
+        method: "POST",
+        body: operationData,
+      });
+
+      // Fetch updated groups
+      await fetchProjectGroups();
+    } catch (err) {
+      console.error("Failed to update group order:", err);
+    }
+  };
+
+  /** Initial data fetching */
+  useEffect(() => {
     fetchProjects();
+    fetchProjectGroups();
   }, []);
 
-  React.useEffect(() => {
-    // there is a nice page with Create button when list is empty
-    // so don't show the context button in that case
+  useEffect(() => {
+    mapProjectsToGroups();
+  }, [projectsList, mapProjectsToGroups]);
+
+
+  /** Update context props */
+  useEffect(() => {
     setContextProps({ openModal, showButton: projectsList.length > 0 });
   }, [projectsList.length]);
+
+  // Verify that projectGroups state is being set correctly
+  // useEffect(() => {
+  //   console.log("Updated project groups:", projectGroups);
+  //   console.log("Updated projects grouped:", groupedProjects);
+  // }, [projectGroups, groupedProjects]);
 
   return (
     <Block name="projects-page">
@@ -127,7 +206,10 @@ export const ProjectsPage = () => {
         <Elem name="content" case="loaded">
           {projectsList.length ? (
             <ProjectsList
-              projects={projectsList}
+              projectGroups={projectGroups}
+              groupedProjects={groupedProjects}
+              ungroupedProjects={groupedProjects["ungrouped"] || []}
+              onGroupDrop={handleGroupDrop}
               currentPage={currentPage}
               totalItems={totalItems}
               loadNextPage={loadNextPage}

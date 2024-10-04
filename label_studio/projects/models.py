@@ -139,6 +139,7 @@ class Project(ProjectMixin, models.Model):
     organization = models.ForeignKey(
         'organizations.Organization', on_delete=models.CASCADE, related_name='projects', null=True
     )
+    groups = models.ManyToManyField('ProjectGroup', related_name='projects', blank=True, help_text='Groups this project belongs to')
     label_config = models.TextField(
         _('label config'),
         blank=True,
@@ -1430,3 +1431,39 @@ class ProjectReimport(models.Model):
 
     def has_permission(self, user):
         return self.project.has_permission(user)
+
+
+class ProjectGroup(models.Model):
+    """Model representing a group of projects."""
+    name = models.CharField(max_length=255, unique=True, help_text='Name of the project group')
+    added_by = models.EmailField(null=True, blank=True, help_text='Email of the user who added the group')
+
+    def __str__(self):
+        return self.name
+    
+class ProjectGroupList(models.Model):
+    """Model representing a user's custom list of project groups."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_group_lists')
+    group = models.ForeignKey('projects.ProjectGroup', on_delete=models.CASCADE)
+    prev_group = models.ForeignKey(
+        'self', 
+        null=True, 
+        blank=True, 
+        related_name='next_groups',
+        on_delete=models.SET_NULL, 
+        help_text='Previous project group in the user\'s list'
+    )
+    next_group = models.ForeignKey(
+        'self', 
+        null=True, 
+        blank=True, 
+        related_name='prev_groups',
+        on_delete=models.SET_NULL, 
+        help_text='Next project group in the user\'s list'
+    )
+
+    class Meta:
+        unique_together = ('user', 'group')
+
+    def __str__(self):
+        return f"{self.user.username}'s {self.group.name}"

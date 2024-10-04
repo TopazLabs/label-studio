@@ -46,7 +46,6 @@
     "codemirror": "^5.59.4",
     "d3": "^5.16.0",
     "d3-color": "3.1.0",
-    "date-fns": "^2.20.1",
     "deep-equal": "^2.0.5",
     "emoji-regex": "^7.0.3",
     "history": "^4.10.1",

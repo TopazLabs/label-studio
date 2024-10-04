@@ -8,6 +8,8 @@ PYTHON_ENV="$PROJECT_DIR/venv"
 YARN_CACHE_FOLDER="$WEB_DIR/.yarn"
 PIP_CACHE_DIR="$HOME/.cache/pip"
 
+export BASE_DROPBOX_DIR="/data/label-studio-dropbox/"
+
 # Ensure you are in the correct directory
 cd $PROJECT_DIR
 
@@ -53,7 +55,7 @@ pip install --upgrade pip setuptools poetry
 poetry install
 
 # Added Pip packages
-pip install pandas matplotlib dash django-plotly-dash pandasql
+pip install pandas matplotlib dash django-plotly-dash pandasql ffmpeg-python
 
 # Step 4: Set up and run Django application
 echo "Setting up and running the Django application..."

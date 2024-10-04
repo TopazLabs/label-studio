@@ -12,6 +12,9 @@ export const API_CONFIG = {
 
     // Project
     projects: "/projects",
+    projectGroups: "GET:/project-groups/",
+    createProjectGroup: "POST:/project-groups/",
+    groupOperations: "POST:/project-groups/ops/",
     project: "/projects/:pk",
     updateProject: "PATCH:/projects/:pk",
     createProject: "POST:/projects",
@@ -34,6 +37,9 @@ export const API_CONFIG = {
 
     // DM
     deleteTabs: "DELETE:/dm/views/reset",
+    getDropbox: "GET:/dm/dropbox",
+    uploadDropbox: "POST:/dm/dropbox",
+    deleteDropbox: "DELETE:/dm/dropbox",
 
     // Storages
     listStorages: "/storages/:target?",

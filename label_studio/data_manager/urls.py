@@ -10,6 +10,8 @@ router.register(r'views', api.ViewAPI, basename='view')
 
 urlpatterns = [
     path('api/dm/', include((router.urls, app_name), namespace='api')),
+    path('api/dm/thumbnail/', api.ThumbnailAPI.as_view(), name='thumbnail'),
+    path('api/dm/dropbox/', api.DropboxAPI.as_view(), name='dropbox'),
     path('api/dm/columns/', api.ProjectColumnsAPI.as_view(), name='dm-columns'),
     path('api/dm/project/', api.ProjectStateAPI.as_view(), name='dm-project'),
     path('api/dm/actions/', api.ProjectActionsAPI.as_view(), name='dm-actions'),

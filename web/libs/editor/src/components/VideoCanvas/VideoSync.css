@@ -53,9 +53,7 @@
     background-color: transparent;
     width: '100%';
     min-height: 100vh;
-    padding-bottom: '50%';
-    position: 'relative';
-    overflow: 'hidden';
+    padding-bottom: 0;
   }
 
   

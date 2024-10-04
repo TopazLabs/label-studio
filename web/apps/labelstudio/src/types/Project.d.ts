@@ -11,6 +11,8 @@ declare type APIProject = {
   /** Label config in XML format. See more about it in documentation */
   label_config?: string | null;
 
+  groups?: number[];
+
   /** Labeling instructions in HTML format */
   expert_instruction?: string | null;
 

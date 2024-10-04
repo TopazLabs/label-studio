@@ -1,5 +1,8 @@
 """This file and its contents are licensed under the Apache License 2.0. Please see the included NOTICE for copyright information and LICENSE for a copy of the license.
 """
+import os
+import uuid
+import zipfile
 import logging
 
 from asgiref.sync import async_to_sync, sync_to_async
@@ -17,6 +20,7 @@ from data_manager.serializers import (
     ViewOrderSerializer,
     ViewResetSerializer,
     ViewSerializer,
+    DropboxAPISerializer,
 )
 from django.conf import settings
 from django.utils.decorators import method_decorator
@@ -29,10 +33,16 @@ from rest_framework import generics, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from django.http import FileResponse, HttpResponse
 from rest_framework.views import APIView
 from tasks.models import Annotation, Prediction, Task
 
+from PIL import Image
+import ffmpeg
+
 logger = logging.getLogger(__name__)
+BASE_DROPBOX_DIR = os.getenv('BASE_DROPBOX_DIR', '/path/to/dropbox')
+
 
 _view_request_body = openapi.Schema(
     type=openapi.TYPE_OBJECT,
@@ -552,3 +562,134 @@ class ProjectActionsAPI(APIView):
         code = result.pop('response_code', 200)
 
         return Response(result, status=code)
+
+
+def get_project_dropbox_dir(pk: int) -> str:
+    assert BASE_DROPBOX_DIR is not None or BASE_DROPBOX_DIR != '/path/to/dropbox', "BASE_DROPBOX_DIR is not set"
+    dropbox_dir = os.path.join(BASE_DROPBOX_DIR, str(pk))
+    os.makedirs(dropbox_dir, exist_ok=True)
+    return dropbox_dir
+
+
+class DropboxAPI(APIView):
+    permission_required = ViewClassPermission(
+        GET=all_permissions.projects_view
+    )
+    def get(self, request):
+        def valid_filetype(file: str) -> bool:
+            return file.lower().endswith(('png', 'jpg', 'jpeg', 'gif', 'bmp', "mp4", "raw", "tiff", "mov", "avi", "mkv"))
+        serializer = DropboxAPISerializer(data=request.GET)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        pk = serializer.validated_data.get('pk')
+        image = serializer.validated_data.get('image')
+        download = serializer.validated_data.get('download')
+
+        dropbox_dir = get_project_dropbox_dir(pk)
+
+        if image:
+            image_path = os.path.join(dropbox_dir, image)
+            if not os.path.exists(image_path):
+                return Response({"error": "Image not found"}, status=404)
+
+            if download:
+                return FileResponse(open(image_path, 'rb'), as_attachment=True)
+            else:
+                return FileResponse(open(image_path, 'rb'))
+
+        if download:
+            zip_filename = f"project_{pk}_dropbox.zip"
+            zip_filepath = os.path.join(dropbox_dir, zip_filename)
+            files =  os.listdir(dropbox_dir)
+            with zipfile.ZipFile(zip_filepath, 'w') as zipf:
+                for file in files:
+                    if valid_filetype(file):
+                        zipf.write(os.path.join(dropbox_dir, file), file)
+            return FileResponse(open(zip_filepath, 'rb'), as_attachment=True)
+
+        images = []
+        for file in os.listdir(dropbox_dir):
+            if valid_filetype(file):
+                images.append({
+                    "img": file,
+                    "thumbnail": f"/api/dm/thumbnail?pk={pk}&image={file}"
+                })
+        return Response(images, status=200)
+
+    def post(self, request):
+        def valid_filetype(file: str) -> bool:
+            return file.lower().endswith(('png', 'jpg', 'jpeg', 'gif', 'bmp', "mp4", "raw", "tiff", "mov", "avi", "mkv"))
+        serializer = DropboxAPISerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        pk = serializer.validated_data.get('pk')
+        files = request.FILES.getlist('files')
+
+        dropbox_dir = get_project_dropbox_dir(pk)
+        os.makedirs(dropbox_dir, exist_ok=True)
+
+        for file in files:
+            try:
+                if not valid_filetype(file.name):
+                    continue
+                file_name, file_format = os.path.splitext(file.name)
+                unique_filename = f"{uuid.uuid4()}{file_format}"
+                with open(os.path.join(dropbox_dir, unique_filename), 'wb') as f:
+                    for chunk in file.chunks():
+                        f.write(chunk)
+            except Exception as e:
+                logger.error(f"Failed to process file {file.name}: {e}")
+                continue
+
+        return Response({"status": "success"}, status=201)
+
+    def delete(self, request):
+        serializer = DropboxAPISerializer(data=request.GET)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        pk = serializer.validated_data.get('pk')
+        image = serializer.validated_data.get('image')
+
+        image_path = os.path.join(get_project_dropbox_dir(pk), image)
+        if os.path.exists(image_path):
+            os.remove(image_path)
+            return Response({"status": "success"}, status=204)
+        else:
+            return Response({"error": "Image not found"}, status=404)
+
+class ThumbnailAPI(APIView):
+    permission_required = ViewClassPermission(
+        GET=all_permissions.projects_view
+    )
+    def get(self, request):
+        pk = request.GET.get('pk')
+        image = request.GET.get('image')
+
+        if not pk or not image:
+            return Response({"error": "Project ID (pk) and image name are required"}, status=404)
+
+        image_path = os.path.join(get_project_dropbox_dir(pk), image)
+        if not os.path.exists(image_path):
+            return Response({"error": "Image/Video not found"}, status=404)
+
+        try:
+            # Use PIL to create a thumbnail for images, and ffmpeg to create a thumbnail for videos
+            if image.lower().endswith(('png', 'jpg', 'jpeg', 'gif', 'bmp')):
+                img = Image.open(image_path)
+                img.thumbnail((100, 100))
+                response = HttpResponse(content_type="image/png")
+                img.save(response, "PNG")
+                return response
+            elif image.lower().endswith(('mp4', 'mov', 'avi', 'mkv')):
+                # Use ffmpeg to create a thumbnail for videos
+                thumbnail_data = ffmpeg.input(image_path, ss=0).filter('scale', 100, -1).output('pipe:', format='image2', vframes=1).run(capture_stdout=True)
+                response = HttpResponse(thumbnail_data[0], content_type="image/jpeg")
+                return response
+            else:
+                return Response({"error": "Invalid file type"}, status=400)
+        except Exception as e:
+            logger.error(f"Failed to create thumbnail for {image}: {e}")
+            return Response({"error": "Failed to create thumbnail"}, status=404)

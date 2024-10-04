@@ -51,8 +51,10 @@ RUN set -eux \
     apt-get purge --assume-yes --auto-remove --option APT::AutoRemove::RecommendsImportant=false \
      --option APT::AutoRemove::SuggestsImportant=false && rm -rf /var/lib/apt/lists/* /tmp/*
 
+RUN apt-get install ffmpeg -y
+
 RUN --mount=type=cache,target=$PIP_CACHE_DIR,uid=1001,gid=0 \
-    pip3 install --upgrade pip setuptools && pip3 install poetry uwsgi uwsgitop
+    pip3 install --upgrade pip setuptools && pip3 install poetry uwsgi uwsgitop Pillow pandas matplotlib dash django-plotly-dash pandasql ffmpeg-python
 
 # incapsulate nginx install & configure to a single layer
 RUN set -eux; \

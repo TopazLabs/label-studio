@@ -493,3 +493,11 @@ class ViewOrderSerializer(serializers.Serializer):
     ids = serializers.ListField(
         child=serializers.IntegerField(), allow_empty=False, help_text='A list of view IDs in the desired order.'
     )
+
+class DropboxAPISerializer(serializers.Serializer):
+    pk = serializers.IntegerField(required=True, help_text='Project ID')
+    image = serializers.CharField(required=False, help_text='Image file name')
+    download = serializers.BooleanField(required=False, help_text='Flag to download the image or zip file')
+    files = serializers.ListField(
+        child=serializers.FileField(), required=False, help_text='List of files to upload'
+    )

@@ -155,3 +155,76 @@
     width: 488px;
   }
 }
+
+.project-groups {
+  margin-top: 16px;
+}
+
+.selected-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.group-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+.group-item .remove-group-button {
+  margin-left: 8px;
+  background-color: transparent;
+  right: 0;
+  border: none;
+  cursor: pointer;
+  color: #ff4c25;
+  font-size: 16px;
+}
+
+.add-group-button {
+  background-color: #dce8e7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 4px 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.group-input-container {
+  position: relative;
+  margin-top: 8px;
+  display: block;
+}
+
+.group-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.group-suggestions {
+  background-color: white;
+  color: #0f0f0f;
+  border: 1px solid #0f0f0f;
+  border-radius: 4px;
+  margin-top: 4px;
+  z-index: 99;
+}
+
+.group-suggestion {
+  padding: 8px;
+  cursor: pointer;
+  border-bottom: 1px solid #0f0f0f;
+  z-index: 100;
+}
+
+.group-suggestion:hover {
+  background-color: #f0f0f0;
+}

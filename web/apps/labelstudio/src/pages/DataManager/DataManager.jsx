@@ -14,6 +14,7 @@ import { isDefined } from "../../utils/helpers";
 import { ImportModal } from "../CreateProject/Import/ImportModal";
 import { ExportPage } from "../ExportPage/ExportPage";
 import { VisualizationPage } from "../VisualizationPage/VisualizationPage";
+import { DropboxPage } from "../DropboxPage/DropboxPage";
 import { APIConfig } from "./api-config";
 import { ToastContext } from "../../components/Toast/Toast";
 import { FF_OPTIC_2, isFF } from "../../utils/feature-flags";
@@ -43,6 +44,7 @@ const initializeDataManager = async (root, props, params) => {
       import: true,
       export: true,
       visualize: true,
+      dropbox: true,
       backButton: false,
       labelingHeader: false,
       autoAnnotation: params.autoAnnotation,
@@ -114,6 +116,10 @@ export const DataManagerPage = ({ ...props }) => {
 
     dataManager.on("visualizeClicked", () => {
       history.push(buildLink("/data/visualize", { id: params.id }));
+    });
+
+    dataManager.on("dropboxClicked", () => {
+      history.push(buildLink("/data/dropbox", { id: params.id }));
     });
 
     dataManager.on("error", (response) => {
@@ -219,7 +225,9 @@ DataManagerPage.pages = {
   ExportPage,
   ImportModal,
   VisualizationPage,
+  DropboxPage,
 };
+
 DataManagerPage.context = ({ dmRef }) => {
   const location = useFixedLocation();
   const { project } = useProject();

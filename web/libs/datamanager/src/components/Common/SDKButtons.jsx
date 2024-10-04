@@ -30,3 +30,7 @@ export const ExportButton = ({ ...props }) => {
 export const VisualizeButton = ({ ...props }) => {
   return <SDKButton {...props} eventName="visualizeClicked" />;
 };
+
+export const DropboxButton = ({ ...props }) => {
+  return <SDKButton {...props} eventName="dropboxClicked" />;
+};

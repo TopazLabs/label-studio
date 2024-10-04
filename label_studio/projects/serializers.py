@@ -3,13 +3,18 @@
 import bleach
 from constants import SAFE_HTML_ATTRIBUTES, SAFE_HTML_TAGS
 from django.db.models import Q
-from projects.models import Project, ProjectImport, ProjectOnboarding, ProjectReimport, ProjectSummary
+from projects.models import Project, ProjectImport, ProjectOnboarding, ProjectReimport, ProjectSummary, ProjectGroup
 from rest_flex_fields import FlexFieldsModelSerializer
 from rest_framework import serializers
 from rest_framework.serializers import SerializerMethodField
 from tasks.models import Task
 from users.serializers import UserSimpleSerializer
 
+
+class ProjectGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectGroup
+        fields = ['id', 'name', 'added_by']
 
 class CreatedByFromContext:
     requires_context = True
@@ -45,6 +50,8 @@ class ProjectSerializer(FlexFieldsModelSerializer):
         'Total annotations = annotation_number + '
         'skipped_annotations_number + ground_truth_number',
     )
+    groups = serializers.PrimaryKeyRelatedField(queryset=ProjectGroup.objects.all(), many=True, required=False)
+
     ground_truth_number = serializers.IntegerField(
         default=None, read_only=True, help_text='Honeypot annotation number in project'
     )
@@ -117,6 +124,7 @@ class ProjectSerializer(FlexFieldsModelSerializer):
             'title',
             'description',
             'label_config',
+            'groups',
             'expert_instruction',
             'show_instruction',
             'show_skip_button',
@@ -189,8 +197,13 @@ class ProjectSerializer(FlexFieldsModelSerializer):
     def update(self, instance, validated_data):
         if validated_data.get('show_collab_predictions') is False:
             instance.model_version = ''
-
-        return super().update(instance, validated_data)
+            
+        groups_data = validated_data.pop('groups', None)
+        instance = super().update(instance, validated_data)
+        if groups_data is not None:
+            instance.groups.set(groups_data)
+        
+        return instance
 
     def get_queue_total(self, project):
         remain = project.tasks.filter(

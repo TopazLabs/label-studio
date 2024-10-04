@@ -1,49 +1,143 @@
 import chr from "chroma-js";
-import { format } from "date-fns";
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useContext } from "react";
 import { NavLink } from "react-router-dom";
 import { LsBulb, LsCheck, LsEllipsis, LsMinus } from "../../assets/icons";
 import { Button, Dropdown, Menu, Pagination, Userpic } from "../../components";
 import { Block, Elem } from "../../utils/bem";
-import { absoluteURL } from "../../utils/helpers";
+import "./Projects.scss";
+import { format } from "date-fns";
 
-const DEFAULT_CARD_COLORS = ["#FFFFFF", "#FDFDFC"];
+const DEFAULT_CARD_COLORS = ["#FFFFFF", "#F5F5F5"]; // Update with your actual default colors
 
-export const ProjectsList = ({ projects, currentPage, totalItems, loadNextPage, pageSize }) => {
+export const ProjectsList = ({
+  projectGroups,
+  groupedProjects,
+  ungroupedProjects,
+  onGroupDrop,
+  currentPage,
+  totalItems,
+  loadNextPage,
+  pageSize,
+}) => {
+  /** Handle drag events */
+  const handleDragStart = (e, groupId) => {
+    e.dataTransfer.setData("draggedGroupId", groupId);
+    setTimeout(() => {
+      e.target.classList.add("dragging");
+    }, 0);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.add("drag-over");
+  };
+
+  const handleDragLeave = (e) => {
+    e.currentTarget.classList.remove("drag-over");
+  };
+
+  const handleDrop = (e, targetGroupId) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove("drag-over");
+    const draggedGroupId = e.dataTransfer.getData("draggedGroupId");
+
+    const mouseY = e.clientY;
+
+    // Get the target group's position
+    const targetElement = e.currentTarget;
+    const targetRect = targetElement.getBoundingClientRect();
+    const targetMidpoint = targetRect.top + targetRect.height / 2;
+
+    const dropkey = mouseY < targetMidpoint ? "next" : "prev";
+
+    onGroupDrop(draggedGroupId, targetGroupId, dropkey);
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.classList.remove("dragging");
+  };
+
+
+  const allProjectsSection = (
+    <ProjectGroupSection
+      key="all"
+      group={{ id: "all", name: "All Projects" }}
+      projects={[...new Set([...ungroupedProjects, ...Object.values(groupedProjects).flat()])]}
+      draggable={false}
+    />
+  );
+
   return (
-    <>
-      <Elem name="list">
-        {projects.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
-      </Elem>
-      <Elem name="pages">
-        <Pagination
-          name="projects-list"
-          label="Projects"
-          page={currentPage}
-          totalItems={totalItems}
-          urlParamName="page"
-          pageSize={pageSize}
-          pageSizeOptions={[10, 30, 50, 100]}
-          onPageLoad={(page, pageSize) => loadNextPage(page, pageSize)}
+    <Block name="projects-list">
+      {projectGroups.filter(group => groupedProjects[group.id] && groupedProjects[group.id].length > 0).map((group, index) => (
+        <ProjectGroupSection
+          key={group.id}
+          group={group}
+          projects={groupedProjects[group.id] || []}
+          onDragStart={(e) => handleDragStart(e, group.id)}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, group.id)}
+          onDragEnd={handleDragEnd}
+          index={index}
+          draggable
         />
-      </Elem>
-    </>
+      ))}
+      {ungroupedProjects.length > 0 && (
+        <ProjectGroupSection
+          group={{ id: "ungrouped", name: "Ungrouped Projects" }}
+          projects={ungroupedProjects}
+          draggable={false}
+        />
+      )}
+      {allProjectsSection}
+      <Pagination
+        page={currentPage}
+        totalItems={totalItems}
+        urlParamName="page"
+        pageSize={pageSize}
+        onChange={loadNextPage}
+      />
+    </Block>
   );
 };
+const ProjectGroupSection = ({
+  group,
+  projects,
+  index = -1,
+  draggable = false,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+}) => {
+  const [isOpen, setIsOpen] = useState(index === 0);
 
-export const EmptyProjectsList = ({ openModal }) => {
   return (
-    <Block name="empty-projects-page">
-      <Elem name="heidi" tag="img" src={absoluteURL("/static/images/opossum_looking.png")} />
-      <Elem name="header" tag="h1">
-        Heidi doesn’t see any projects here!
+    <Block
+      name="project-group-section"
+      mod={{ draggable }}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+    >
+      <Elem name="header" onClick={() => setIsOpen(!isOpen)}>
+        <Elem name="title">{group?.name ?? "loading..."}</Elem>
+        <Elem name="toggle">{isOpen ? "▼" : "►"}</Elem>
       </Elem>
-      <p>Create one and start labeling your data.</p>
-      <Elem name="action" tag={Button} onClick={openModal} look="primary">
-        Create Project
-      </Elem>
+      {isOpen && (
+        <Elem name="projects">
+          <Elem name="project-list">
+            {projects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </Elem>
+        </Elem>
+      )}
     </Block>
   );
 };
@@ -119,5 +213,20 @@ const ProjectCard = ({ project }) => {
         </Elem>
       </Block>
     </Elem>
+  );
+};
+
+export const EmptyProjectsList = ({ openModal }) => {
+  return (
+    <Block name="empty-projects-page">
+      {/* Customize this component according to your application's needs */}
+      <Elem name="header" tag="h1">
+        No projects found!
+      </Elem>
+      <p>Create one and start labeling your data.</p>
+      <Elem name="action" tag={Button} onClick={openModal} look="primary">
+        Create Project
+      </Elem>
+    </Block>
   );
 };

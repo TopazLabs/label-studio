@@ -37,8 +37,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import math
 
-
-
 from .models import ConvertedFormat, DataExport, Export
 from .serializers import (
     ExportConvertSerializer,
