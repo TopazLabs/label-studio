@@ -17,6 +17,7 @@ from data_manager.functions import filters_ordering_selected_items_exist, get_pr
 from django.conf import settings
 from django.db import IntegrityError
 from django.db.models import F
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.http import Http404
 from django.utils.decorators import method_decorator
@@ -813,6 +814,7 @@ class ProjectSampleTask(generics.RetrieveAPIView):
         project = self.get_object()
         return Response({'sample_task': project.get_sample_task(label_config)}, status=200)
 
+User = get_user_model()
 
 class ProjectModelVersions(generics.RetrieveAPIView):
     parser_classes = (JSONParser,)
@@ -866,17 +868,30 @@ class ProjectGroupListAPI(APIView):
         return Response(serializer.data)
 
     def initialize_user_group_list(self, user):
-        existing_groups = ProjectGroupList.objects.filter(user=user).exists()
-        if not existing_groups:
-            with transaction.atomic():
-                groups = ProjectGroup.objects.all().order_by('id')
+        existing_groups = ProjectGroupList.objects.filter(user=user)
+        all_groups = ProjectGroup.objects.all().order_by('id')
+
+        with transaction.atomic():
+            if not existing_groups.exists():
                 prev_node = None
-                for group in groups:
+                for group in all_groups:
                     node = ProjectGroupList.objects.create(user=user, group=group, prev_group=prev_node)
                     if prev_node:
                         prev_node.next_group = node
                         prev_node.save()
                     prev_node = node
+            else:
+                # Check for new groups and add them to the user's list
+                user_group_ids = set(existing_groups.values_list('group_id', flat=True))
+                new_groups = all_groups.exclude(id__in=user_group_ids)
+                
+                last_node = existing_groups.filter(next_group__isnull=True).first()
+                for group in new_groups:
+                    new_node = ProjectGroupList.objects.create(user=user, group=group, prev_group=last_node)
+                    if last_node:
+                        last_node.next_group = new_node
+                        last_node.save()
+                    last_node = new_node
 
     def get_ordered_groups(self, user):
         head_node = ProjectGroupList.objects.filter(user=user, prev_group__isnull=True).first()
@@ -886,6 +901,51 @@ class ProjectGroupListAPI(APIView):
             ordered_groups.append(current_node.group)
             current_node = current_node.next_group
         return ordered_groups
+
+    def post(self, request):
+        serializer = ProjectGroupSerializer(data=request.data)
+        if serializer.is_valid():
+            new_group = serializer.save(added_by=request.user.email)
+            
+            # Add the new group to all users' ProjectGroupLists
+            self.add_group_to_all_users(new_group)
+            
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+
+    def patch(self, request):
+        groups_data = request.data
+        if not isinstance(groups_data, list):
+            groups_data = [groups_data]
+
+        updated_groups = []
+
+        for group_data in groups_data:
+            group_id = group_data.get('id')
+            if not group_id:
+                continue
+            try:
+                project_group = ProjectGroup.objects.get(pk=group_id)
+                serializer = ProjectGroupSerializer(project_group, data=group_data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    updated_groups.append(serializer.data)
+            except ProjectGroup.DoesNotExist:
+                continue
+
+        if updated_groups:
+            return Response(updated_groups, status=200)
+        else:
+            return Response({"error": "No valid project groups to update."}, status=400)
+
+    def add_group_to_all_users(self, new_group):
+        with transaction.atomic():
+            for user in User.objects.all():
+                first_node = ProjectGroupList.objects.filter(user=user, prev_group__isnull=True).first()
+                new_node = ProjectGroupList.objects.create(user=user, group=new_group, next_group=first_node)
+                if first_node:
+                    first_node.prev_group = new_node
+                    first_node.save()
 
 class ProjectGroupListOpsAPI(APIView):
     def post(self, request):
