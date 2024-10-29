@@ -314,9 +314,7 @@ class ImageSyncComponent extends Component {
             newLoadedImages.sort((a, b) => a.index - b.index);
             return { loadedImages: newLoadedImages };
           }, () => {
-            if (this.state.loadedImages.length === 1) {
               this.fitImagesToColumns();
-            }
           });
         };
         img.src = imagePath;
@@ -402,7 +400,7 @@ class ImageSyncComponent extends Component {
     const container = document.querySelector('.imagesync-image-column');
     if (!container) {
       console.debug('Container not found, returning 100%');
-      return '100%';
+      return 'Scale: 100%\nImage Dims: 0x0';
     }
   
     const w_c = container.clientWidth;
@@ -413,7 +411,7 @@ class ImageSyncComponent extends Component {
     const image = document.querySelector(`.synced-image-${imageIndex}`);
     if (!image) {
       console.debug('Image not found, returning 100%');
-      return '100%';
+      return 'Scale: 100%\nImage Dims: 0x0';
     }
   
     console.debug('Image found:', image);
@@ -437,17 +435,14 @@ class ImageSyncComponent extends Component {
     let displayed_h = Math.round(visible_h / scale);
     const display_aspect_ratio = displayed_w / displayed_h;
 
-    const displayScale = scale; // * screen_scale;
-
-    // displayed_w = w_c / (true_w_i * displayScale / w_c);
-    // displayed_h = displayed_w / display_aspect_ratio;
+    const displayScale = scale;
   
     const percentage = ((visible_w * visible_h) / (true_w_i * true_h_i) * 100).toFixed(2);
   
     console.debug(`Displayed dimensions: ${displayed_w}x${displayed_h}`);
     console.debug(`Percentage of image visible: ${percentage}%`);
   
-    return `${(displayScale * 100).toFixed(2)}%, ${displayed_w.toFixed(0)}x${displayed_h}px of ${true_w_i}x${true_h_i}px`;
+    return `Scale: ${(displayScale * 100).toFixed(2)}%\nImage Dims: ${true_w_i}x${true_h_i}`;
   }
 
 
@@ -503,6 +498,11 @@ class ImageSyncComponent extends Component {
     return parseValue(item[imageName], store.task.dataObj);
   }
 
+  getImageSourceByIndex = (index) => {
+    const imageSource = this.getImageSource(`image${index}`);
+    return imageSource ?? null;
+  }
+
 
   ////////////////////////////////
   // VISUAL INTERFACE ///////////
@@ -539,8 +539,8 @@ class ImageSyncComponent extends Component {
         onMouseMove={this.handleMouseMove}
       >
         <div className="imagesync-images-container">
-          {loadedImages.map(({ index, path }) => (
-            <div 
+          {['image0', 'image1', 'image2'].map((image_i, index) => (
+            this.getImageSourceByIndex(index) && <div 
               key={index}
               data-image-index={index} 
               onWheel={this.handleWheel}
@@ -562,7 +562,7 @@ class ImageSyncComponent extends Component {
               className="imagesync-image-wrapper"
               onDoubleClick={() => this.handleImageDoubleClick(index)}
               >
-                {this.renderImage(path, index)}
+                {this.renderImage(this.getImageSource(image_i), index)}
               </div>
             </div>
           ))}

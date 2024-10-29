@@ -91,9 +91,9 @@ class VideoSyncComponent extends Component {
                 newLoadedVideos.sort((a, b) => a.index - b.index);
                 return { loadedVideos: newLoadedVideos };
               }, () => {
-                this.fitVideosToColumns();
                 this.initializeVideos();
               });
+              this.fitVideosToColumns();
             };
             video.src = videoPath;
           }
@@ -150,10 +150,6 @@ class VideoSyncComponent extends Component {
                 e.preventDefault();
                 this.handleZoomOut();
             }
-            else if (e.key === 'r' || e.key === 'R') {
-                e.preventDefault();
-                this.handleReset();
-            }
         } else {
             switch (e.key) {
                 case 'ArrowUp':
@@ -179,6 +175,11 @@ class VideoSyncComponent extends Component {
                 case '.':
                     e.preventDefault();
                     this.stepForward();
+                    break;
+                case 'r':
+                case 'R':
+                    e.preventDefault();
+                    this.handleReset();
                     break;
                 default:
                     break;
@@ -485,37 +486,23 @@ class VideoSyncComponent extends Component {
     
     calculateFramePercentage(scale, videoIndex) {
         const container = document.querySelector('.VideoSync-video-container');
-        if (!container) return '100%'; // Default to 100% if container not found
+        if (!container) return 'Scale: 100%\nVideo Dims: 0x0';
+
+        const video = this.videoRefs[videoIndex]?.current ?? null;
+        if (!video) return 'Scale: 100%\nVideo Dims: 0x0';
 
         const containerWidth = container.clientWidth;
         const containerHeight = container.clientHeight;
-
-        console.log(`Container dimensions: ${containerWidth}x${containerHeight}`);
-
-        const video = this.videoRefs[videoIndex].current;
-        if (!video) {
-            console.log('Video not found, returning 100%');
-            return '100%'; // Default to 100% if video not found
-        }
-
         const videoWidth = video.videoWidth;
         const videoHeight = video.videoHeight;
-        console.log(`Video dimensions: ${videoWidth}x${videoHeight}`);
 
         // Calculate the scale factor for both dimensions
         const widthScale = (containerWidth * scale) / videoWidth;
         const heightScale = (containerHeight * scale) / videoHeight;
-        console.log(`Width scale: ${widthScale}, Height scale: ${heightScale}`);
-
-        // Use the smaller scale factor to determine the overall scale
         const overallScale = Math.min(widthScale, heightScale);
-        console.log(`Overall scale: ${overallScale}`);
-
-        // Convert to percentage and round to 2 decimal places
         const percentage = (overallScale * 100).toFixed(2);
-        console.log(`Final percentage: ${percentage}%`);
 
-        return `Scale: ${percentage}%, Video Dims: ${videoWidth}x${videoHeight}`;
+        return `Scale: ${percentage}%\nVideo Dims: ${videoWidth}x${videoHeight}`;
     }
 
     simulateKeyPress = (key) => {
@@ -569,6 +556,11 @@ class VideoSyncComponent extends Component {
         return parseValue(item[videoName], store.task.dataObj);
     }
 
+    getVideoSourceByIndex = (index) => {
+        const videoSource = this.getVideoSource(`video${index}`);
+        return videoSource ?? null;
+    }
+
     renderVideo = (src, index) => {
         const { scale, position } = this.state;
         const transform = `scale(${scale}) translate(${position[0]}px, ${position[1]}px)`;
@@ -617,6 +609,8 @@ class VideoSyncComponent extends Component {
             framerate
           } = this.state;
           const transform = `translate(${position[0]}px, ${position[1]}px) scale(${scale})`;
+
+          console.log("loadedVideos", loadedVideos);
         
           return (
             <Block
@@ -633,8 +627,8 @@ class VideoSyncComponent extends Component {
               ref={this.containerRef}
             >
               <div className="VideoSync-container">
-                {loadedVideos.map(({ index, path }) => (
-                    <div
+                {['video0', 'video1', 'video2'].map((video_i, index) => (
+                    this.getVideoSourceByIndex(index) && <div
                     key={index}
                     data-video-index={index}
                     data-selected={choices[index]}
@@ -651,7 +645,7 @@ class VideoSyncComponent extends Component {
                         </span>
                     </h3>
                     <div className="VideoSync-video-container">
-                        {this.renderVideo(path, index)}
+                        {this.renderVideo(video_i, index)}
                     </div>
                     </div>
                 ))}
@@ -680,7 +674,7 @@ class VideoSyncComponent extends Component {
                 />
               </div>
             </Block>
-        );        
+        );
     }
 }
   
